@@ -691,15 +691,17 @@ void DefaultUI::updateStandbyScreen() {
             lv_label_set_text(ui_StandbyScreen_time, time);
             lv_obj_clear_flag(ui_StandbyScreen_time, LV_OBJ_FLAG_HIDDEN);
 
-            // Adjust standard layout to make room
-            if (ui_StandbyScreen_logo) {
-                lv_obj_set_y(ui_StandbyScreen_logo, -140);
-                lv_img_set_zoom(ui_StandbyScreen_logo, 140);
-            }
-            if (ui_StandbyScreen_time)
-                lv_obj_set_y(ui_StandbyScreen_time, -180);
-
             if (settings.isAiEnabled()) {
+                // Move clock high up
+                if (ui_StandbyScreen_time)
+                    lv_obj_set_y(ui_StandbyScreen_time, -120);
+
+                // Move logo just below clock and make smaller
+                if (ui_StandbyScreen_logo) {
+                    lv_obj_set_y(ui_StandbyScreen_logo, -60);
+                    lv_img_set_zoom(ui_StandbyScreen_logo, 120);
+                }
+
                 if (ui_StandbyScreen_aiMessage == nullptr) {
                     ui_StandbyScreen_aiMessage = lv_label_create(ui_StandbyScreen);
                     lv_obj_set_width(ui_StandbyScreen_aiMessage, 300);

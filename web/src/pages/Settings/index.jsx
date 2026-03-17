@@ -130,6 +130,9 @@ export function Settings() {
       if (key === 'autowakeupEnabled') {
         value = !formData.autowakeupEnabled;
       }
+      if (key === 'aiEnabled') {
+        value = !formData.aiEnabled;
+      }
       if (key === 'standbyDisplayEnabled') {
         value = !formData.standbyDisplayEnabled;
         // Set standby brightness to 0 when toggle is off

@@ -255,6 +255,84 @@ export function PluginCard({
 
       <div className='bg-base-200 rounded-lg p-4'>
         <div className='flex items-center justify-between'>
+          <span className='text-xl font-medium'>AI Standby Message Plugin</span>
+          <input
+            id='aiEnabled'
+            name='aiEnabled'
+            value='aiEnabled'
+            type='checkbox'
+            className='toggle toggle-primary'
+            checked={!!formData.aiEnabled}
+            onChange={onChange('aiEnabled')}
+            aria-label='Enable AI Plugin'
+          />
+        </div>
+        {formData.aiEnabled && (
+          <div className='border-base-300 mt-4 space-y-4 border-t pt-4'>
+            <p className='text-sm opacity-70'>
+              Display a custom AI-generated greeting on the standby screen.
+            </p>
+            <div className='form-control'>
+              <label htmlFor='aiApiUrl' className='mb-2 block text-sm font-medium'>
+                API URL (OpenAI Compatible)
+              </label>
+              <input
+                id='aiApiUrl'
+                name='aiApiUrl'
+                type='text'
+                className='input input-bordered w-full'
+                placeholder='https://api.openai.com/v1/chat/completions'
+                value={formData.aiApiUrl}
+                onChange={onChange('aiApiUrl')}
+              />
+            </div>
+            <div className='form-control'>
+              <label htmlFor='aiApiKey' className='mb-2 block text-sm font-medium'>
+                API Key
+              </label>
+              <input
+                id='aiApiKey'
+                name='aiApiKey'
+                type='password'
+                className='input input-bordered w-full'
+                placeholder='sk-...'
+                value={formData.aiApiKey}
+                onChange={onChange('aiApiKey')}
+              />
+            </div>
+            <div className='form-control'>
+              <label htmlFor='aiPrompt' className='mb-2 block text-sm font-medium'>
+                AI Prompt
+              </label>
+              <textarea
+                id='aiPrompt'
+                name='aiPrompt'
+                className='textarea textarea-bordered w-full'
+                rows='3'
+                value={formData.aiPrompt}
+                onChange={onChange('aiPrompt')}
+              />
+            </div>
+            <div className='form-control'>
+              <label htmlFor='aiUpdateInterval' className='mb-2 block text-sm font-medium'>
+                Update Interval (Hours)
+              </label>
+              <input
+                id='aiUpdateInterval'
+                name='aiUpdateInterval'
+                type='number'
+                className='input input-bordered w-full'
+                min='1'
+                value={formData.aiUpdateInterval}
+                onChange={onChange('aiUpdateInterval')}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className='bg-base-200 rounded-lg p-4'>
+        <div className='flex items-center justify-between'>
           <span className='text-xl font-medium'>Home Assistant over MQTT (Deprecated)</span>
           <input
             id='homeAssistant'

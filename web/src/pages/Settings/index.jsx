@@ -185,6 +185,14 @@ export function Settings() {
     setAutoWakeupSchedules(newSchedules);
   };
 
+  const aiUpdateNow = async () => {
+    try {
+      await fetch('/api/ai/update', { method: 'POST' });
+    } catch (e) {
+      console.error('Failed to trigger AI update', e);
+    }
+  };
+
   const onSubmit = useCallback(
     async (e, restart = false) => {
       e.preventDefault();
@@ -979,6 +987,7 @@ export function Settings() {
               removeAutoWakeupSchedule={removeAutoWakeupSchedule}
               updateAutoWakeupTime={updateAutoWakeupTime}
               updateAutoWakeupDay={updateAutoWakeupDay}
+              aiUpdateNow={aiUpdateNow}
             />
           </Card>
         </div>

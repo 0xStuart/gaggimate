@@ -10,6 +10,7 @@ export function PluginCard({
   removeAutoWakeupSchedule,
   updateAutoWakeupTime,
   updateAutoWakeupDay,
+  aiUpdateNow,
 }) {
   return (
     <div className='space-y-4'>
@@ -255,7 +256,7 @@ export function PluginCard({
 
       <div className='bg-base-200 rounded-lg p-4'>
         <div className='flex items-center justify-between'>
-          <span className='text-xl font-medium'>AI Standby Message Plugin</span>
+          <span className='text-xl font-medium'>AI Plugin</span>
           <input
             id='aiEnabled'
             name='aiEnabled'
@@ -281,7 +282,7 @@ export function PluginCard({
                 name='aiApiUrl'
                 type='text'
                 className='input input-bordered w-full'
-                placeholder='https://api.openai.com/v1/chat/completions'
+                placeholder='https://api.x.ai/v1/chat/completions'
                 value={formData.aiApiUrl}
                 onChange={onChange('aiApiUrl')}
               />
@@ -301,8 +302,22 @@ export function PluginCard({
               />
             </div>
             <div className='form-control'>
+              <label htmlFor='aiModel' className='mb-2 block text-sm font-medium'>
+                LLM Model
+              </label>
+              <input
+                id='aiModel'
+                name='aiModel'
+                type='text'
+                className='input input-bordered w-full'
+                placeholder='grok-4-1-fast-non-reasoning'
+                value={formData.aiModel}
+                onChange={onChange('aiModel')}
+              />
+            </div>
+            <div className='form-control'>
               <label htmlFor='aiPrompt' className='mb-2 block text-sm font-medium'>
-                AI Prompt
+                AI Standby Message Prompt
               </label>
               <textarea
                 id='aiPrompt'
@@ -317,15 +332,25 @@ export function PluginCard({
               <label htmlFor='aiUpdateInterval' className='mb-2 block text-sm font-medium'>
                 Update Interval (Hours)
               </label>
-              <input
-                id='aiUpdateInterval'
-                name='aiUpdateInterval'
-                type='number'
-                className='input input-bordered w-full'
-                min='1'
-                value={formData.aiUpdateInterval}
-                onChange={onChange('aiUpdateInterval')}
-              />
+              <div className='flex gap-2'>
+                <input
+                  id='aiUpdateInterval'
+                  name='aiUpdateInterval'
+                  type='number'
+                  className='input input-bordered w-full'
+                  min='1'
+                  value={formData.aiUpdateInterval}
+                  onChange={onChange('aiUpdateInterval')}
+                />
+                <button
+                  type='button'
+                  className='btn btn-secondary'
+                  onClick={aiUpdateNow}
+                  title='Fetch new message now'
+                >
+                  Run Now
+                </button>
+              </div>
             </div>
           </div>
         )}

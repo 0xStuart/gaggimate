@@ -13,6 +13,7 @@
 
 #include <SD_MMC.h>
 #include <algorithm>
+#include <display/plugins/AIPlugin.h>
 #include <display/plugins/BLEScalePlugin.h>
 #include <display/plugins/ShotHistoryPlugin.h>
 #include <string>
@@ -200,6 +201,10 @@ void WebUIPlugin::setupServer() {
     server.on("/api/scales/connect", [this](AsyncWebServerRequest *request) { handleBLEScaleConnect(request); });
     server.on("/api/scales/scan", [this](AsyncWebServerRequest *request) { handleBLEScaleScan(request); });
     server.on("/api/scales/info", [this](AsyncWebServerRequest *request) { handleBLEScaleInfo(request); });
+    server.on("/api/ai/update", HTTP_POST, [](AsyncWebServerRequest *request) {
+        AI.updateMessage();
+        request->send(200);
+    });
     FS *fs = &SPIFFS;
     if (controller->isSDCard()) {
         fs = &SD_MMC;
@@ -543,6 +548,8 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
                 settings->setAiApiUrl(request->arg("aiApiUrl"));
             if (request->hasArg("aiApiKey"))
                 settings->setAiApiKey(request->arg("aiApiKey"));
+            if (request->hasArg("aiModel"))
+                settings->setAiModel(request->arg("aiModel"));
             if (request->hasArg("aiPrompt"))
                 settings->setAiPrompt(request->arg("aiPrompt"));
             if (request->hasArg("aiUpdateInterval"))
@@ -648,6 +655,7 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
     doc["aiEnabled"] = settings.isAiEnabled();
     doc["aiApiUrl"] = settings.getAiApiUrl();
     doc["aiApiKey"] = settings.getAiApiKey();
+    doc["aiModel"] = settings.getAiModel();
     doc["aiPrompt"] = settings.getAiPrompt();
     doc["aiUpdateInterval"] = settings.getAiUpdateInterval();
 

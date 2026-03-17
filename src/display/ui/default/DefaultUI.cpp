@@ -695,9 +695,11 @@ void DefaultUI::updateStandbyScreen() {
                 if (ui_StandbyScreen_aiMessage == nullptr) {
                     ui_StandbyScreen_aiMessage = lv_label_create(ui_StandbyScreen);
                     lv_obj_set_width(ui_StandbyScreen_aiMessage, 300);
+                    lv_obj_set_height(ui_StandbyScreen_aiMessage, 100);
                     lv_obj_set_align(ui_StandbyScreen_aiMessage, LV_ALIGN_CENTER);
-                    lv_obj_set_y(ui_StandbyScreen_aiMessage, 80);
+                    lv_obj_set_y(ui_StandbyScreen_aiMessage, 60);
                     lv_obj_set_style_text_align(ui_StandbyScreen_aiMessage, LV_TEXT_ALIGN_CENTER, 0);
+                    lv_label_set_long_mode(ui_StandbyScreen_aiMessage, LV_LABEL_LONG_WRAP);
                     ui_object_set_themeable_style_property(ui_StandbyScreen_aiMessage, LV_PART_MAIN | LV_STATE_DEFAULT,
                                                            LV_STYLE_TEXT_COLOR, _ui_theme_color_NiceWhite);
                     lv_obj_set_style_text_font(ui_StandbyScreen_aiMessage, &lv_font_montserrat_14, 0);

@@ -25,10 +25,14 @@ class AIPlugin : public Plugin {
     String currentMessage = "";
     unsigned long lastUpdate = 0;
     unsigned long lastCheck = 0;
+    bool needsUpdate = false;
     static const unsigned long CHECK_INTERVAL = 60000; // 1 minute
+
+    xTaskHandle updateTaskHandle = nullptr;
 
     bool isUpdateNeeded();
     void fetchAiMessage();
+    static void updateTask(void *arg);
 };
 
 extern AIPlugin AI;

@@ -29,9 +29,21 @@ void AIPlugin::loop() {
         lastCheck = now;
 
         if (isUpdateNeeded()) {
-            fetchAiMessage();
+            needsUpdate = true;
         }
     }
+
+    if (needsUpdate && updateTaskHandle == nullptr) {
+        needsUpdate = false;
+        xTaskCreate(updateTask, "AIPlugin::update", 1024 * 16, this, 1, &updateTaskHandle);
+    }
+}
+
+void AIPlugin::updateTask(void *arg) {
+    auto *plugin = static_cast<AIPlugin *>(arg);
+    plugin->fetchAiMessage();
+    plugin->updateTaskHandle = nullptr;
+    vTaskDelete(NULL);
 }
 
 bool AIPlugin::isUpdateNeeded() {
@@ -77,7 +89,7 @@ void AIPlugin::fetchAiMessage() {
 
     // Create JSON request body (OpenAI format)
     JsonDocument doc;
-    doc["model"] = "gpt-3.5-turbo"; // Default model
+    doc["model"] = settings->getAiModel();
     JsonArray messages = doc["messages"].to<JsonArray>();
     JsonObject msg = messages.add<JsonObject>();
     msg["role"] = "user";
@@ -118,4 +130,4 @@ void AIPlugin::fetchAiMessage() {
     http.end();
 }
 
-void AIPlugin::updateMessage() { fetchAiMessage(); }
+void AIPlugin::updateMessage() { needsUpdate = true; }

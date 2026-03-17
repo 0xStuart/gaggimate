@@ -111,6 +111,7 @@ class Settings {
     bool isAiEnabled() const { return aiEnabled; }
     String getAiApiUrl() const { return aiApiUrl; }
     String getAiApiKey() const { return aiApiKey; }
+    String getAiModel() const { return aiModel; }
     String getAiPrompt() const { return aiPrompt; }
     int getAiUpdateInterval() const { return aiUpdateInterval; }
     bool isAutoWakeupEnabled() const { return autowakeupEnabled; }
@@ -176,6 +177,7 @@ class Settings {
     void setAiEnabled(bool enabled);
     void setAiApiUrl(const String &url);
     void setAiApiKey(const String &key);
+    void setAiModel(const String &model);
     void setAiPrompt(const String &prompt);
     void setAiUpdateInterval(int interval);
 
@@ -246,8 +248,9 @@ class Settings {
     int altRelayFunction = ALT_RELAY_GRIND; // Default to grind
 
     bool aiEnabled = false;
-    String aiApiUrl = "";
+    String aiApiUrl = "https://api.x.ai/v1/chat/completions";
     String aiApiKey = "";
+    String aiModel = "grok-4-1-fast-non-reasoning";
     String aiPrompt =
         "You are a coffee machine in standby mode. Provide fun coffee related greeting message, and weather in Palermo.";
     int aiUpdateInterval = 1; // 1 hour default

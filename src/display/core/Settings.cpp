@@ -106,8 +106,9 @@ Settings::Settings() {
     altRelayFunction = preferences.getInt("alt_relay", ALT_RELAY_GRIND);
 
     aiEnabled = preferences.getBool("ai_en", false);
-    aiApiUrl = preferences.getString("ai_url", "");
+    aiApiUrl = preferences.getString("ai_url", "https://api.x.ai/v1/chat/completions");
     aiApiKey = preferences.getString("ai_key", "");
+    aiModel = preferences.getString("ai_mo", "grok-4-1-fast-non-reasoning");
     aiPrompt = preferences.getString(
         "ai_pr", "You are a coffee machine in standby mode. Provide fun coffee related greeting message, and weather in Palermo.");
     aiUpdateInterval = preferences.getInt("ai_int", 1);
@@ -443,6 +444,11 @@ void Settings::setAiApiKey(const String &key) {
     save();
 }
 
+void Settings::setAiModel(const String &model) {
+    aiModel = model;
+    save();
+}
+
 void Settings::setAiPrompt(const String &prompt) {
     aiPrompt = prompt;
     save();
@@ -538,6 +544,7 @@ void Settings::doSave() {
     preferences.putBool("ai_en", aiEnabled);
     preferences.putString("ai_url", aiApiUrl);
     preferences.putString("ai_key", aiApiKey);
+    preferences.putString("ai_mo", aiModel);
     preferences.putString("ai_pr", aiPrompt);
     preferences.putInt("ai_int", aiUpdateInterval);
 

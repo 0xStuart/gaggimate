@@ -110,7 +110,8 @@ Settings::Settings() {
     aiApiKey = preferences.getString("ai_key", "");
     aiModel = preferences.getString("ai_mo", "grok-4-1-fast-non-reasoning");
     aiPrompt = preferences.getString(
-        "ai_pr", "You are a coffee machine in standby mode. Provide fun coffee related greeting message, and weather in Palermo.");
+        "ai_pr",
+        "You are a espresso machine in standby mode. Provide fun coffee related greeting message, and weather in Palermo. You can add a news item too. Keep it short to fit on a small screen.");
     aiUpdateInterval = preferences.getInt("ai_int", 1);
 
     preferences.end();

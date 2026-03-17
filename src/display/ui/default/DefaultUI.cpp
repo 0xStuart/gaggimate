@@ -691,13 +691,19 @@ void DefaultUI::updateStandbyScreen() {
             lv_label_set_text(ui_StandbyScreen_time, time);
             lv_obj_clear_flag(ui_StandbyScreen_time, LV_OBJ_FLAG_HIDDEN);
 
+            // Adjust standard layout to make room
+            if (ui_StandbyScreen_logo)
+                lv_obj_set_y(ui_StandbyScreen_logo, -40);
+            if (ui_StandbyScreen_time)
+                lv_obj_set_y(ui_StandbyScreen_time, -180);
+
             if (settings.isAiEnabled()) {
                 if (ui_StandbyScreen_aiMessage == nullptr) {
                     ui_StandbyScreen_aiMessage = lv_label_create(ui_StandbyScreen);
                     lv_obj_set_width(ui_StandbyScreen_aiMessage, 300);
-                    lv_obj_set_height(ui_StandbyScreen_aiMessage, 100);
+                    lv_obj_set_height(ui_StandbyScreen_aiMessage, 120);
                     lv_obj_set_align(ui_StandbyScreen_aiMessage, LV_ALIGN_CENTER);
-                    lv_obj_set_y(ui_StandbyScreen_aiMessage, 60);
+                    lv_obj_set_y(ui_StandbyScreen_aiMessage, 100);
                     lv_obj_set_style_text_align(ui_StandbyScreen_aiMessage, LV_TEXT_ALIGN_CENTER, 0);
                     lv_label_set_long_mode(ui_StandbyScreen_aiMessage, LV_LABEL_LONG_WRAP);
                     ui_object_set_themeable_style_property(ui_StandbyScreen_aiMessage, LV_PART_MAIN | LV_STATE_DEFAULT,
@@ -708,6 +714,11 @@ void DefaultUI::updateStandbyScreen() {
                 lv_obj_clear_flag(ui_StandbyScreen_aiMessage, LV_OBJ_FLAG_HIDDEN);
             } else if (ui_StandbyScreen_aiMessage != nullptr) {
                 lv_obj_add_flag(ui_StandbyScreen_aiMessage, LV_OBJ_FLAG_HIDDEN);
+                // Reset standard layout
+                if (ui_StandbyScreen_logo)
+                    lv_obj_set_y(ui_StandbyScreen_logo, 0);
+                if (ui_StandbyScreen_time)
+                    lv_obj_set_y(ui_StandbyScreen_time, -150);
             }
 
             christmasMode = (timeinfo.tm_mon == 11 && timeinfo.tm_mday < 27) || (timeinfo.tm_mon == 0 && timeinfo.tm_mday < 6);

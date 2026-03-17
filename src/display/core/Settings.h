@@ -252,7 +252,7 @@ class Settings {
     String aiApiKey = "";
     String aiModel = "grok-4-1-fast-non-reasoning";
     String aiPrompt =
-        "You are a coffee machine in standby mode. Provide fun coffee related greeting message, and weather in Palermo.";
+        "You are a espresso machine in standby mode. Provide fun coffee related greeting message, and weather in Palermo. You can add a news item too. Keep it short to fit on a small screen.";
     int aiUpdateInterval = 1; // 1 hour default
 
     void doSave();

@@ -111,6 +111,16 @@ void AIPlugin::fetchAiMessage() {
                 String messageStr = String(aiMessage);
                 messageStr.trim();
 
+                // Simple markdown and newline cleanup
+                messageStr.replace("**", "");
+                messageStr.replace("*", "");
+                messageStr.replace("\n", " ");
+                messageStr.replace("\r", "");
+                while (messageStr.indexOf("  ") != -1) {
+                    messageStr.replace("  ", " ");
+                }
+                messageStr.trim();
+
                 currentMessage = messageStr;
 
                 time_t now;

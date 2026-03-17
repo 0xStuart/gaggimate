@@ -538,6 +538,15 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
             if (request->hasArg("altRelayFunction"))
                 settings->setAltRelayFunction(request->arg("altRelayFunction").toInt());
             settings->setAutoWakeupEnabled(request->hasArg("autowakeupEnabled"));
+            settings->setAiEnabled(request->hasArg("aiEnabled"));
+            if (request->hasArg("aiApiUrl"))
+                settings->setAiApiUrl(request->arg("aiApiUrl"));
+            if (request->hasArg("aiApiKey"))
+                settings->setAiApiKey(request->arg("aiApiKey"));
+            if (request->hasArg("aiPrompt"))
+                settings->setAiPrompt(request->arg("aiPrompt"));
+            if (request->hasArg("aiUpdateInterval"))
+                settings->setAiUpdateInterval(request->arg("aiUpdateInterval").toInt());
             if (request->hasArg("autowakeupSchedules")) {
                 // Handle schedule format with days
                 String schedulesStr = request->arg("autowakeupSchedules");
@@ -636,6 +645,12 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
     doc["altRelayFunction"] = settings.getAltRelayFunction();
     // Add auto-wakeup settings to response
     doc["autowakeupEnabled"] = settings.isAutoWakeupEnabled();
+    doc["aiEnabled"] = settings.isAiEnabled();
+    doc["aiApiUrl"] = settings.getAiApiUrl();
+    doc["aiApiKey"] = settings.getAiApiKey();
+    doc["aiPrompt"] = settings.getAiPrompt();
+    doc["aiUpdateInterval"] = settings.getAiUpdateInterval();
+    doc["aiLastMessage"] = settings.getAiLastMessage();
 
     // Add schedule format with days
     std::vector<AutoWakeupSchedule> autowakeupSchedules = settings.getAutoWakeupSchedules();

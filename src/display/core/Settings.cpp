@@ -105,6 +105,15 @@ Settings::Settings() {
     fullTankDistance = preferences.getInt("sr_fd", 50);
     altRelayFunction = preferences.getInt("alt_relay", ALT_RELAY_GRIND);
 
+    aiEnabled = preferences.getBool("ai_en", false);
+    aiApiUrl = preferences.getString("ai_url", "");
+    aiApiKey = preferences.getString("ai_key", "");
+    aiPrompt = preferences.getString(
+        "ai_pr", "You are a coffee machine in standby mode. Provide fun coffee related greeting message, and weather in Palermo.");
+    aiUpdateInterval = preferences.getInt("ai_int", 1);
+    aiLastMessage = preferences.getString("ai_msg", "");
+    aiLastUpdate = preferences.getULong("ai_lu", 0);
+
     preferences.end();
 
     xTaskCreate(loopTask, "Settings::loop", configMINIMAL_STACK_SIZE * 6, this, 1, &taskHandle);
@@ -421,6 +430,41 @@ void Settings::setAutoWakeupSchedules(const std::vector<AutoWakeupSchedule> &sch
     save();
 }
 
+void Settings::setAiEnabled(bool enabled) {
+    aiEnabled = enabled;
+    save();
+}
+
+void Settings::setAiApiUrl(const String &url) {
+    aiApiUrl = url;
+    save();
+}
+
+void Settings::setAiApiKey(const String &key) {
+    aiApiKey = key;
+    save();
+}
+
+void Settings::setAiPrompt(const String &prompt) {
+    aiPrompt = prompt;
+    save();
+}
+
+void Settings::setAiUpdateInterval(int interval) {
+    aiUpdateInterval = interval;
+    save();
+}
+
+void Settings::setAiLastMessage(const String &message) {
+    aiLastMessage = message;
+    save();
+}
+
+void Settings::setAiLastUpdate(unsigned long lastUpdate) {
+    aiLastUpdate = lastUpdate;
+    save();
+}
+
 void Settings::doSave() {
     if (!dirty) {
         return;
@@ -502,6 +546,14 @@ void Settings::doSave() {
     preferences.putInt("sr_ed", emptyTankDistance);
     preferences.putInt("sr_fd", fullTankDistance);
     preferences.putInt("alt_relay", altRelayFunction);
+
+    preferences.putBool("ai_en", aiEnabled);
+    preferences.putString("ai_url", aiApiUrl);
+    preferences.putString("ai_key", aiApiKey);
+    preferences.putString("ai_pr", aiPrompt);
+    preferences.putInt("ai_int", aiUpdateInterval);
+    preferences.putString("ai_msg", aiLastMessage);
+    preferences.putULong("ai_lu", aiLastUpdate);
 
     preferences.end();
 }

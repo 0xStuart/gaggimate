@@ -73,6 +73,8 @@ class DefaultUI {
     void updateTempStableFlag();
     void adjustHeatingIndicator(lv_obj_t *contentPanel);
 
+    lv_obj_t *ui_StandbyScreen_aiMessage = nullptr;
+
     Driver *panelDriver = nullptr;
     Controller *controller;
     PluginManager *pluginManager;

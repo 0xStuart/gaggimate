@@ -12,6 +12,7 @@
 #include <display/core/process/SteamProcess.h>
 #include <display/core/static_profiles.h>
 #include <display/core/zones.h>
+#include <display/plugins/AIPlugin.h>
 #include <display/plugins/AutoWakeupPlugin.h>
 #include <display/plugins/BLEScalePlugin.h>
 #include <display/plugins/BoilerFillPlugin.h>
@@ -74,6 +75,7 @@ void Controller::setup() {
     pluginManager->registerPlugin(&BLEScales);
     pluginManager->registerPlugin(new LedControlPlugin());
     pluginManager->registerPlugin(new AutoWakeupPlugin());
+    pluginManager->registerPlugin(new AIPlugin());
     pluginManager->setup(this);
 
     pluginManager->on("profiles:profile:save", [this](Event const &event) {

@@ -197,6 +197,11 @@ void DefaultUI::init() {
         targetVolume = profileManager->getSelectedProfile().getTotalVolume();
         rerender = true;
     });
+    pluginManager->on("ai:message:new", [this](Event const &event) {
+        if (lv_scr_act() == ui_StandbyScreen && ui_StandbyScreen_aiMessage != nullptr) {
+            lv_label_set_text(ui_StandbyScreen_aiMessage, event.getString("message").c_str());
+        }
+    });
     pluginManager->on("controller:volumetric-measurement:bluetooth:change", [=](Event const &event) {
         double newWeight = event.getFloat("value");
         if (round(newWeight * 10.0) != round(bluetoothWeight * 10.0)) {
@@ -653,6 +658,7 @@ void DefaultUI::handleScreenChange() {
         } else if (current == ui_StandbyScreen) {
             const Settings &settings = controller->getSettings();
             setBrightness(settings.getMainBrightness());
+            ui_StandbyScreen_aiMessage = nullptr;
         }
 
         _ui_screen_change(targetScreen, LV_SCR_LOAD_ANIM_NONE, 0, 0, targetScreenInit);
@@ -683,6 +689,23 @@ void DefaultUI::updateStandbyScreen() {
             strftime(time, sizeof(time), format, &timeinfo);
             lv_label_set_text(ui_StandbyScreen_time, time);
             lv_obj_clear_flag(ui_StandbyScreen_time, LV_OBJ_FLAG_HIDDEN);
+
+            if (settings.isAiEnabled()) {
+                if (ui_StandbyScreen_aiMessage == nullptr) {
+                    ui_StandbyScreen_aiMessage = lv_label_create(ui_StandbyScreen);
+                    lv_obj_set_width(ui_StandbyScreen_aiMessage, 300);
+                    lv_obj_set_align(ui_StandbyScreen_aiMessage, LV_ALIGN_CENTER);
+                    lv_obj_set_y(ui_StandbyScreen_aiMessage, 80);
+                    lv_obj_set_style_text_align(ui_StandbyScreen_aiMessage, LV_TEXT_ALIGN_CENTER, 0);
+                    ui_object_set_themeable_style_property(ui_StandbyScreen_aiMessage, LV_PART_MAIN | LV_STATE_DEFAULT,
+                                                           LV_STYLE_TEXT_COLOR, _ui_theme_color_NiceWhite);
+                    lv_obj_set_style_text_font(ui_StandbyScreen_aiMessage, &lv_font_montserrat_14, 0);
+                }
+                lv_label_set_text(ui_StandbyScreen_aiMessage, settings.getAiLastMessage().c_str());
+                lv_obj_clear_flag(ui_StandbyScreen_aiMessage, LV_OBJ_FLAG_HIDDEN);
+            } else if (ui_StandbyScreen_aiMessage != nullptr) {
+                lv_obj_add_flag(ui_StandbyScreen_aiMessage, LV_OBJ_FLAG_HIDDEN);
+            }
 
             christmasMode = (timeinfo.tm_mon == 11 && timeinfo.tm_mday < 27) || (timeinfo.tm_mon == 0 && timeinfo.tm_mday < 6);
         }

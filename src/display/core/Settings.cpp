@@ -111,8 +111,6 @@ Settings::Settings() {
     aiPrompt = preferences.getString(
         "ai_pr", "You are a coffee machine in standby mode. Provide fun coffee related greeting message, and weather in Palermo.");
     aiUpdateInterval = preferences.getInt("ai_int", 1);
-    aiLastMessage = preferences.getString("ai_msg", "");
-    aiLastUpdate = preferences.getULong("ai_lu", 0);
 
     preferences.end();
 
@@ -455,16 +453,6 @@ void Settings::setAiUpdateInterval(int interval) {
     save();
 }
 
-void Settings::setAiLastMessage(const String &message) {
-    aiLastMessage = message;
-    save();
-}
-
-void Settings::setAiLastUpdate(unsigned long lastUpdate) {
-    aiLastUpdate = lastUpdate;
-    save();
-}
-
 void Settings::doSave() {
     if (!dirty) {
         return;
@@ -552,8 +540,6 @@ void Settings::doSave() {
     preferences.putString("ai_key", aiApiKey);
     preferences.putString("ai_pr", aiPrompt);
     preferences.putInt("ai_int", aiUpdateInterval);
-    preferences.putString("ai_msg", aiLastMessage);
-    preferences.putULong("ai_lu", aiLastUpdate);
 
     preferences.end();
 }

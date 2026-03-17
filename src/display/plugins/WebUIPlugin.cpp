@@ -650,7 +650,6 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
     doc["aiApiKey"] = settings.getAiApiKey();
     doc["aiPrompt"] = settings.getAiPrompt();
     doc["aiUpdateInterval"] = settings.getAiUpdateInterval();
-    doc["aiLastMessage"] = settings.getAiLastMessage();
 
     // Add schedule format with days
     std::vector<AutoWakeupSchedule> autowakeupSchedules = settings.getAutoWakeupSchedules();

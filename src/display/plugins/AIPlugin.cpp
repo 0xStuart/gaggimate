@@ -5,6 +5,8 @@
 
 const String AI_LOG_TAG = F("AIPlugin");
 
+AIPlugin AI;
+
 AIPlugin::AIPlugin() : controller(nullptr), pluginManager(nullptr), settings(nullptr) {}
 
 void AIPlugin::setup(Controller *ctrl, PluginManager *pm) {
@@ -34,7 +36,7 @@ void AIPlugin::loop() {
 
 bool AIPlugin::isUpdateNeeded() {
     // If we don't have a message yet, we need one
-    if (settings->getAiLastMessage().isEmpty()) {
+    if (currentMessage.isEmpty()) {
         return true;
     }
 
@@ -44,7 +46,6 @@ bool AIPlugin::isUpdateNeeded() {
         return false;
     }
 
-    unsigned long lastUpdate = settings->getAiLastUpdate();
     unsigned long intervalSeconds = (unsigned long)settings->getAiUpdateInterval() * 3600;
 
     if ((unsigned long)now - lastUpdate > intervalSeconds) {
@@ -98,14 +99,14 @@ void AIPlugin::fetchAiMessage() {
                 String messageStr = String(aiMessage);
                 messageStr.trim();
 
-                settings->setAiLastMessage(messageStr);
+                currentMessage = messageStr;
 
                 time_t now;
                 time(&now);
-                settings->setAiLastUpdate((unsigned long)now);
+                lastUpdate = (unsigned long)now;
 
-                ESP_LOGI(AI_LOG_TAG.c_str(), "New AI message received: %s", messageStr.c_str());
-                pluginManager->trigger("ai:message:new", "message", messageStr);
+                ESP_LOGI(AI_LOG_TAG.c_str(), "New AI message received: %s", currentMessage.c_str());
+                pluginManager->trigger("ai:message:new", "message", currentMessage);
             }
         } else {
             ESP_LOGE(AI_LOG_TAG.c_str(), "JSON deserialization failed: %s", error.c_str());

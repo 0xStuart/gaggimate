@@ -701,7 +701,7 @@ void DefaultUI::updateStandbyScreen() {
                                                            LV_STYLE_TEXT_COLOR, _ui_theme_color_NiceWhite);
                     lv_obj_set_style_text_font(ui_StandbyScreen_aiMessage, &lv_font_montserrat_14, 0);
                 }
-                lv_label_set_text(ui_StandbyScreen_aiMessage, settings.getAiLastMessage().c_str());
+                lv_label_set_text(ui_StandbyScreen_aiMessage, AI.getCurrentMessage().c_str());
                 lv_obj_clear_flag(ui_StandbyScreen_aiMessage, LV_OBJ_FLAG_HIDDEN);
             } else if (ui_StandbyScreen_aiMessage != nullptr) {
                 lv_obj_add_flag(ui_StandbyScreen_aiMessage, LV_OBJ_FLAG_HIDDEN);

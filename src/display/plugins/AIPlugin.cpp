@@ -121,6 +121,17 @@ void AIPlugin::fetchAiMessage() {
                 }
                 messageStr.trim();
 
+                // Simple UTF-8 emoji/special char stripper (keeps standard ASCII)
+                String filtered = "";
+                for (size_t i = 0; i < messageStr.length(); i++) {
+                    unsigned char c = (unsigned char)messageStr[i];
+                    if (c < 128) {
+                        filtered += (char)c;
+                    }
+                }
+                messageStr = filtered;
+                messageStr.trim();
+
                 currentMessage = messageStr;
 
                 time_t now;

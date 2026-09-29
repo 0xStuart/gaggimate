@@ -12,6 +12,18 @@
 
 </p>
 
+
+## Personal fork of [jniebuhr/gaggimate](https://github.com/jniebuhr/gaggimate).
+
+- **Scale-ready brew confirm** — If a scale is required, brew waits until a real BLE weight sample arrives (not only GATT connect), then auto-starts after a short settle. Ignore / Cancel still use the existing brew-confirm overlay.
+- **Network firmware upload** — System & Updates has **Allow network firmware upload**, off by default. When on, the display accepts a LAN push on TCP/UDP 3232 (ArduinoOTA / PlatformIO `espota`). No extra password (the web UI is already open on the LAN). STA Wi‑Fi only; ignored while a brew is running or a GitHub OTA is in progress.
+
+First image still needs USB. After that, with the switch on:
+
+```bash
+pio run -e display -t upload --upload-protocol espota --upload-port x.x.x.x
+```
+
 This project upgrades a Gaggia espresso machine with smart controls to improve your coffee-making experience. By adding a display and custom electronics, you can monitor and control the machine more easily.
 
 <img src="docs/assets/gaggimate_poster.jpg" alt="Gaggia Classic Installation" width="500" />
@@ -37,20 +49,6 @@ You can buy your kit on https://shop.gaggimate.eu/
 ## How It Works
 
 The display allows you to control the espresso machine and see live temperature updates. If the machine becomes unresponsive or the temperature goes too high, it will automatically turn off for safety.
-
-## This fork
-
-Personal fork of [jniebuhr/gaggimate](https://github.com/jniebuhr/gaggimate). These changes stay here; they are not intended as upstream PRs unless noted.
-
-- **Scale-ready brew confirm** — If a scale is required, brew waits until a real BLE weight sample arrives (not only GATT connect), then auto-starts after a short settle. Ignore / Cancel still use the existing brew-confirm overlay.
-- **Network firmware upload** — System & Updates has **Allow network firmware upload**, off by default. When on, the display accepts a LAN push on TCP/UDP 3232 (ArduinoOTA / PlatformIO `espota`). No extra password (the web UI is already open on the LAN). STA Wi‑Fi only; ignored while a brew is running or a GitHub OTA is in progress.
-
-First image still needs USB. After that, with the switch on:
-
-```bash
-pio run -e display -t upload --upload-protocol espota --upload-port x.x.x.x
-```
-
 
 ## Docs
 

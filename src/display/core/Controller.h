@@ -290,6 +290,14 @@ class Controller {
     unsigned long lastBluetoothMeasurement = 0;
     static const unsigned long BLUETOOTH_GRACE_PERIOD_MS = 1500; // 1.5 second grace period
     static const unsigned long CONTROLLER_WAITING_TIMEOUT_MS = 10000;
+    static const unsigned long SCALE_READY_SETTLE_MS = 500;
+
+    // Brew-confirm overlay: wait for a live scale sample, then auto-continue.
+    bool brewConfirmPending = false;
+    bool brewConfirmWaitingOnScale = false;
+    unsigned long scaleWaitReadyAt = 0;
+    bool scaleBlocksBrew() const;
+    void updateBrewConfirm();
 
     xTaskHandle logicTaskHandle;
 

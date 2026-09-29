@@ -58,11 +58,18 @@ void WarningManager::sampleTemperature() {
 void WarningManager::evaluate() {
     const Settings &settings = controller->getSettings();
     const bool scaleConnected = BLEScales.isConnected();
+    // GATT connect is not enough: until the first weight sample arrives,
+    // isBluetoothScaleHealthy() is false and a volumetric brew would start
+    // as a timed shot that then ignores later BLE samples.
+    const bool scaleRequired =
+        !settings.getSavedScale().isEmpty() ||
+        (controller->getProfileManager() != nullptr && controller->getProfileManager()->getSelectedProfile().isVolumetric());
+    const bool scaleReady = scaleConnected && controller->isBluetoothScaleHealthy();
 
     active[WARNING_WATER] = controller->getSystemInfo().capabilities.tof && controller->isLowWaterLevel();
     active[WARNING_FLUSH] = controller->isFlushPending();
     active[WARNING_SWITCH] = controller->isSteamSwitchOn();
-    active[WARNING_SCALE_CONNECTED] = !scaleConnected && settings.getSavedScale() != "";
+    active[WARNING_SCALE_CONNECTED] = scaleRequired && !scaleReady;
     active[WARNING_SCALE_BATTERY] = scaleConnected && BLEScales.hasBatteryLevel() && BLEScales.getBatteryLevel() < 20;
     active[WARNING_TEMPERATURE] = !temperatureStable;
 

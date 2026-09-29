@@ -26,6 +26,7 @@
 #include <display/plugins/HomekitPlugin.h>
 #include <display/plugins/ImprovPlugin.h>
 #include <display/plugins/MQTTPlugin.h>
+#include <display/plugins/ArduinoOTAPlugin.h>
 #include <display/plugins/NetworkWatchdogPlugin.h>
 #include <display/plugins/WifiStaWatchdogPlugin.h>
 #include <display/plugins/mDNSPlugin.h>
@@ -96,6 +97,7 @@ void Controller::setup() {
 #endif
     pluginManager->registerPlugin(new WebUIPlugin());
 #ifndef GAGGIMATE_SIM // WiFi watchdogs and BLE scales are device-only
+    pluginManager->registerPlugin(new ArduinoOTAPlugin());
     pluginManager->registerPlugin(new NetworkWatchdogPlugin());
     pluginManager->registerPlugin(new WifiStaWatchdogPlugin());
     pluginManager->registerPlugin(new ImprovPlugin());
@@ -505,6 +507,7 @@ void Controller::loop() {
     }
 
     warnings.loop();
+    updateBrewConfirm();
     pluginManager->loop();
     buttons.loop(millis()); // deferred combo presses + long-press timing
 
@@ -1059,11 +1062,28 @@ void Controller::activate(bool ignoreWarnings) {
     // previously its Start action ran against a half-initialized BLE session.
     if (isActive() || !loaded || !comms.isConnected() || !isReady())
         return;
-    // An error-level warning turns the start into a confirmation request; the UIs answer with activate(true).
-    if (mode == MODE_BREW && !ignoreWarnings && warnings.hasError()) {
+    // Error-level warnings, or a paired/required scale that is not actually
+    // sending weight, turn the start into a confirmation. Ignore (warning
+    // setting) still skips. The existing overlay's Back / Start anyway are
+    // enough; waiting is implicit and updateBrewConfirm() auto-continues.
+    if (mode == MODE_BREW && !ignoreWarnings && (warnings.hasError() || scaleBlocksBrew())) {
+        if (warnings.isActive(WARNING_SCALE_CONNECTED)) {
+            // Drop stale health so a previous connection's grace period cannot
+            // make the next activate() succeed before a fresh sample arrives.
+            lastBluetoothMeasurement = 0;
+            volumetricOverride = false;
+            brewConfirmWaitingOnScale = true;
+        } else {
+            brewConfirmWaitingOnScale = false;
+        }
+        brewConfirmPending = true;
+        scaleWaitReadyAt = 0;
         pluginManager->trigger("controller:brew:confirm");
         return;
     }
+    brewConfirmPending = false;
+    brewConfirmWaitingOnScale = false;
+    scaleWaitReadyAt = 0;
     clear();
     comms.tare();
     currentWaterPumped = 0.0f;
@@ -1106,7 +1126,43 @@ void Controller::activate(bool ignoreWarnings) {
 }
 
 // A UI declined the brew confirmation; every UI showing it dismisses.
-void Controller::cancelBrewConfirm() { pluginManager->trigger("controller:brew:confirm:cancel"); }
+void Controller::cancelBrewConfirm() {
+    brewConfirmPending = false;
+    brewConfirmWaitingOnScale = false;
+    scaleWaitReadyAt = 0;
+    pluginManager->trigger("controller:brew:confirm:cancel");
+}
+
+bool Controller::scaleBlocksBrew() const {
+    return warnings.isActive(WARNING_SCALE_CONNECTED) &&
+           warnings.getLevel(WARNING_SCALE_CONNECTED) != WARNING_LEVEL_IGNORE;
+}
+
+void Controller::updateBrewConfirm() {
+    if (!brewConfirmPending)
+        return;
+    if (mode != MODE_BREW) {
+        cancelBrewConfirm();
+        return;
+    }
+    if (warnings.hasError() || scaleBlocksBrew()) {
+        scaleWaitReadyAt = 0;
+        return;
+    }
+    if (!brewConfirmWaitingOnScale)
+        return;
+    const unsigned long now = millis();
+    if (scaleWaitReadyAt == 0) {
+        scaleWaitReadyAt = now;
+        return;
+    }
+    if (now - scaleWaitReadyAt >= SCALE_READY_SETTLE_MS) {
+        brewConfirmPending = false;
+        brewConfirmWaitingOnScale = false;
+        scaleWaitReadyAt = 0;
+        activate(false);
+    }
+}
 
 void Controller::deactivate() {
     std::vector<const char *> events;

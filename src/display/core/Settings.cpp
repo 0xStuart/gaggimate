@@ -135,6 +135,8 @@ void Settings::setVolumetricTarget(bool volumetric_target) { volumetricTarget.se
 
 void Settings::setOTAChannel(const String &otaChannel) { this->otaChannel.set(otaChannel); }
 
+void Settings::setNetworkOtaEnabled(bool enabled) { networkOtaEnabled.set(enabled); }
+
 void Settings::setSavedScale(const String &savedScale) { this->savedScale.set(savedScale); }
 
 void Settings::setBoilerFillActive(bool boiler_fill_active) { boilerFillActive.set(boiler_fill_active); }

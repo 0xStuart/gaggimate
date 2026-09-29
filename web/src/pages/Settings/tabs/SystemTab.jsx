@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck';
 import { Spinner } from '../../../components/Spinner.jsx';
 import Section from '../../../components/Card.jsx';
+import { ToggleField } from '../../../components/SettingsFormField.jsx';
 
 const imageUrlToBase64 = async blob => {
   return new Promise((onSuccess, onError) => {
@@ -211,6 +212,8 @@ export function SystemTab() {
   const [formData, setFormData] = useState({});
   const [phase, setPhase] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [networkOta, setNetworkOta] = useState(false);
+  const [networkOtaSaving, setNetworkOtaSaving] = useState(false);
   const rssi = machine.value.status.rssi;
   const lat = machine.value.status.lat;
   const rtx = machine.value.status.rtx;
@@ -281,6 +284,13 @@ export function SystemTab() {
     }, 500);
   }, [apiService]);
 
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => setNetworkOta(!!data.networkOta))
+      .catch(() => {});
+  }, []);
+
   const formRef = useRef();
 
   const onSubmit = useCallback(
@@ -304,6 +314,29 @@ export function SystemTab() {
   const [rebuilding, setRebuilding] = useState(false);
   const [rebuilt, setRebuilt] = useState(false);
   const [rebuildProgress, setRebuildProgress] = useState({ total: 0, current: 0, status: '' });
+
+  const onNetworkOtaChange = useCallback(async e => {
+    const enabled = e.currentTarget.checked;
+    setNetworkOta(enabled);
+    setNetworkOtaSaving(true);
+    try {
+      const body = new URLSearchParams();
+      body.set('networkOta', enabled ? '1' : '0');
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      });
+      if (!response.ok) {
+        throw new Error(`POST /api/settings ${response.status}`);
+      }
+    } catch (err) {
+      console.error('Failed to save network OTA setting:', err);
+      setNetworkOta(!enabled);
+    } finally {
+      setNetworkOtaSaving(false);
+    }
+  }, []);
 
   const onHistoryRebuild = useCallback(async () => {
     setRebuilt(false);
@@ -344,6 +377,17 @@ export function SystemTab() {
             </div>
           </div>
         </form>
+
+        <div className='mt-6'>
+          <ToggleField
+            label='Allow network firmware upload'
+            htmlFor='networkOta'
+            checked={networkOta}
+            onChange={onNetworkOtaChange}
+            helpText='Off by default. When on, a PC on this network can push display firmware with PlatformIO espota (port 3232). Same LAN trust as the rest of the web UI; no extra password.'
+          />
+          {networkOtaSaving && <div className='text-base-content/70 mt-1 text-xs'>Saving…</div>}
+        </div>
 
         <div className='border-base-content/5 mt-6 grid grid-cols-1 gap-6 border-t pt-6 md:grid-cols-2'>
           <div className='flex flex-col space-y-1'>

@@ -1,0 +1,11 @@
+---
+description: Personal GaggiMate fork — keep fork features local and documented
+alwaysApply: true
+---
+
+This tree is Stuart's fork of jniebuhr/gaggimate.
+
+- Keep README.md "This fork" in sync when fork-only behaviour changes.
+- Scale brew confirm waits for a BLE weight sample, not GATT connect; reuse the existing overlay.
+- Network ArduinoOTA is fork-only (`networkOta`, default off, no password). Do not PR it upstream.
+- Do not leak Wi-Fi or Home Assistant passwords from device settings.

@@ -114,9 +114,6 @@ void BLEScalePlugin::setup(Controller *controller, PluginManager *manager) {
 }
 
 void BLEScalePlugin::loop() {
-    if (doConnect && scale == nullptr) {
-        establishConnection();
-    }
     if (!active) {
         if (scale != nullptr) {
             // Entering standby powers the scale off too; a no-op for drivers without shutdown support.
@@ -127,9 +124,12 @@ void BLEScalePlugin::loop() {
             disconnect();
         }
         shutdownPending = false;
-        if (scanner->isScanRunning()) {
+        doConnect = false;
+        if (scanner != nullptr && scanner->isScanRunning()) {
             scanner->stopAsyncScan();
         }
+    } else if (doConnect && scale == nullptr) {
+        establishConnection();
     }
     const unsigned long now = millis();
     if (now - lastUpdate > UPDATE_INTERVAL_MS) {
@@ -171,14 +171,22 @@ void BLEScalePlugin::update() {
         // emitted inline with each weight measurement, not polled here.
         pollScaleMetadata();
     } else if (controller->getSettings().getSavedScale() != "" && scanner != nullptr) {
-        // Protected scanner access with null checks
         auto discoveredScales = scanner->getDiscoveredScales();
+        const String savedAddr = controller->getSettings().getSavedScale();
+        bool found = false;
         for (const auto &d : discoveredScales) {
-            if (d.getAddress().toString() == controller->getSettings().getSavedScale().c_str()) {
+            if (d.getAddress().toString() == savedAddr.c_str()) {
                 ESP_LOGI("BLEScalePlugin", "Connecting to last known scale");
                 connect(d.getAddress().toString());
+                found = true;
                 break;
             }
+        }
+        const unsigned long now = millis();
+        if (!found && now - lastScanRestart >= SCAN_RESTART_INTERVAL_MS) {
+            lastScanRestart = now;
+            ESP_LOGI("BLEScalePlugin", "Restarting BLE scale scan");
+            scanner->restartAsyncScan();
         }
     }
 }
@@ -262,6 +270,10 @@ void BLEScalePlugin::pollScaleMetadata() {
 void BLEScalePlugin::tare() const { onProcessStart(); }
 
 void BLEScalePlugin::establishConnection() {
+    // One attempt per connect() request. Leaving doConnect latched restarts the
+    // scan on every loop tick and the scale is never seen advertising.
+    doConnect = false;
+
     if (uuid.empty()) {
         ESP_LOGE("BLEScalePlugin", "Cannot establish connection with empty UUID");
         return;

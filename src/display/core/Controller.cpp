@@ -1124,7 +1124,6 @@ void Controller::activate(bool ignoreWarnings) {
             // make the next activate() succeed before a fresh sample arrives.
             lastBluetoothMeasurement.store(0);
             lastHardwareMeasurement.store(0);
-            volumetricOverride = false;
             brewConfirmWaitingOnScale = true;
         } else {
             brewConfirmWaitingOnScale = false;

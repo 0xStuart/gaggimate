@@ -161,6 +161,8 @@ void Settings::setNetworkOtaEnabled(bool enabled) { networkOtaEnabled.set(enable
 
 void Settings::setSavedScale(const String &savedScale) { this->savedScale.set(savedScale); }
 
+void Settings::setSavedScaleName(const String &savedScaleName) { this->savedScaleName.set(savedScaleName); }
+
 void Settings::setBoilerFillActive(bool boiler_fill_active) { boilerFillActive.set(boiler_fill_active); }
 
 void Settings::setStartupFillTime(int startup_fill_time) { startupFillTime.set(startup_fill_time); }

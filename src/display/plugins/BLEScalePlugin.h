@@ -3,10 +3,13 @@
 #include "../core/Plugin.h"
 #include "remote_scales.h"
 #include "remote_scales_plugin_registry.h"
+#include <atomic>
 
 void on_ble_measurement(float value);
 
 constexpr unsigned long UPDATE_INTERVAL_MS = 1000;
+// Listening window after a scan request before scale:scan:complete; the lib's scan itself is continuous.
+constexpr unsigned long SCAN_WINDOW_MS = 5000;
 // NimBLE continuous scan can go deaf after a few minutes. Restarting
 // clears the scanner and lets a scale that was powered off at wake still
 // be found later without rebooting GaggiMate.
@@ -19,10 +22,10 @@ class BLEScalePlugin : public Plugin {
 
     void setup(Controller *controller, PluginManager *pluginManager) override;
     void loop() override;
-    ;
 
     void connect(const std::string &uuid);
-    void scan() const;
+    void scan();
+    void forget();
     void disconnect();
     void onMeasurement(float value);
     bool isConnected() { return scale != nullptr && scale->isConnected(); };
@@ -69,11 +72,18 @@ class BLEScalePlugin : public Plugin {
     void pollScaleMetadata();
 
     void establishConnection();
+    void emitScanComplete();
+    void emitConnectError(const std::string &address, const char *reason);
 
     bool active = false;
     bool shutdownPending = false; // set on entering standby, consumed by loop() before disconnecting
     bool doConnect = false;
     std::string uuid;
+
+    std::atomic<bool> scanRequested{false};   // set by scan() from any task, consumed in loop()
+    std::atomic<bool> forgetRequested{false}; // set by forget() from any task, consumed in loop()
+    bool scanWindowOpen = false;
+    unsigned long scanDeadline = 0;
 
     unsigned long lastUpdate = 0;
     unsigned long lastScanRestart = 0;

@@ -109,6 +109,7 @@ class Settings {
     String getOTAChannel() const { return otaChannel.get(); }
     bool isNetworkOtaEnabled() const { return networkOtaEnabled.get(); }
     String getSavedScale() const { return savedScale.get(); }
+    String getSavedScaleName() const { return savedScaleName.get(); }
     bool isBoilerFillActive() const { return boilerFillActive.get(); }
     int getStartupFillTime() const { return startupFillTime.get(); }
     int getSteamFillTime() const { return steamFillTime.get(); }
@@ -221,6 +222,7 @@ class Settings {
     void setOTAChannel(const String &otaChannel);
     void setNetworkOtaEnabled(bool enabled);
     void setSavedScale(const String &savedScale);
+    void setSavedScaleName(const String &savedScaleName);
     void setBoilerFillActive(bool boiler_fill_active);
     void setStartupFillTime(int startup_fill_time);
     void setSteamFillTime(int steam_fill_time);
@@ -328,6 +330,7 @@ class Settings {
     Property<String> wifiApPassword{registry, "wap", ""}; // empty until generated on first start
     Property<String> mdnsName{registry, "mn", DEFAULT_MDNS_NAME};
     Property<String> savedScale{registry, "ssc", ""};
+    Property<String> savedScaleName{registry, "sscn", ""}; // advertised BLE name, shown while the scale is out of range
     Property<bool> homekit{registry, "hk", false};
     Property<bool> volumetricTarget{registry, "vt", false};
     Property<bool> boilerFillActive{registry, "bf_a", false};

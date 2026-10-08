@@ -9,3 +9,4 @@ This tree is Stuart's fork of jniebuhr/gaggimate.
 - Scale brew confirm waits for a BLE weight sample, not GATT connect; reuse the existing overlay.
 - Network ArduinoOTA is fork-only (`networkOta`, default off, no password). Do not PR it upstream.
 - Do not leak Wi-Fi or Home Assistant passwords from device settings.
+- Widescreen HMI watch: 1024×600+ ESP32-S3 touch (7B-class). Keep official UI as a 480×480 island. Flag better boards; do not start a driver unless asked.

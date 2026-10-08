@@ -17,6 +17,20 @@ Current fork features:
 - Treat BLE GATT connect as “scale ready”.
 - Print or repeat Wi‑Fi / Home Assistant passwords from `/api/settings`.
 
+## Widescreen display watch
+
+Stuart wants a **1024×600-class** ESP32 touch panel (Waveshare ESP32-S3-Touch-LCD-7B is the current favourite) so the official **480×480** circular UI can sit on the left and LVGL graphs on the right. Fork is OK if official UI stays an untouched 480×480 LVGL island (two logical displays, one framebuffer).
+
+**Keep watching for boards that:**
+- ≥ **1024×600** capacitive touch (800×480 is too narrow for a brew graph)
+- ESP32-S3 + 8MB PSRAM, Arduino-capable, so GaggiMate’s display stack can be reused
+- Preferably **less Wi‑Fi vs RGB contention** than the 7B (IDF 5.1+ bounce buffers, MIPI/DSI, or ESP32-P4 — P4 is a *new* platform, call that out)
+- In stock in the UK / EU when possible
+
+**Not a candidate:** 2.1" rounds, 1.43/1.75" AMOLEDs, 4" 480 squares, Elecrow-style **800×480** 5–7" panels.
+
+If a better board shows up, tell Stuart; do not buy or start a driver until he asks.
+
 ## Device notes
 
 - Display env: `pio run -e display`. PIO binary: `~/.platformio/penv/bin/pio`.

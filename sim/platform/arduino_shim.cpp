@@ -8,6 +8,9 @@
 #include <ctime>
 #include <thread>
 #include <unistd.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 // Seed the host PRNG once at startup so esp_random() (and thus generated profile
 // IDs etc.) differs every run — otherwise rand() repeats the same sequence and
@@ -37,9 +40,20 @@ unsigned long micros(void) {
     return (unsigned long)std::chrono::duration_cast<std::chrono::microseconds>(now - g_start).count();
 }
 
+#ifdef __EMSCRIPTEN__
+// Browser build: sleeping must hand control back to the page (needs -sASYNCIFY).
+void delay(uint32_t ms) { emscripten_sleep(ms); }
+void delayMicroseconds(uint32_t us) {
+    const unsigned long until = micros() + us;
+    while ((long)(until - micros()) > 0) {
+    }
+}
+void yield(void) {}
+#else
 void delay(uint32_t ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 void delayMicroseconds(uint32_t us) { std::this_thread::sleep_for(std::chrono::microseconds(us)); }
 void yield(void) { std::this_thread::yield(); }
+#endif
 
 int64_t esp_timer_get_time(void) {
     auto now = std::chrono::steady_clock::now();

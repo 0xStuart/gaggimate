@@ -1,6 +1,8 @@
 #include "PanelHost.h"
 
 #include "ClockPanel.h"
+#include "GaugesPanel.h"
+#include "GraphPanel.h"
 #include <Preferences.h>
 #include <cstring>
 #include <display/main.h>
@@ -25,8 +27,11 @@ PanelHost &PanelHost::instance() {
 void PanelHost::add(SidePanel *panel) { panels.push_back(panel); }
 
 void PanelHost::begin(lv_disp_t *disp) {
-    if (panels.empty())
+    if (panels.empty()) {
         add(new ClockPanel());
+        add(new GaugesPanel());
+        add(new GraphPanel());
+    }
 
     screen = lv_disp_get_scr_act(disp);
     lv_obj_set_style_bg_color(screen, lv_color_black(), 0);
@@ -93,7 +98,7 @@ void PanelHost::show(int index) {
     content = lv_obj_create(screen);
     lv_obj_remove_style_all(content);
     lv_obj_set_size(content, PANEL_W, PANEL_H);
-    lv_obj_clear_flag(content, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(content, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     lv_obj_move_background(content);
 
     const bool changed = index != active;
@@ -149,6 +154,8 @@ void PanelHost::onTimer(lv_timer_t *timer) {
 
     Telemetry telemetry;
     host->sample(telemetry);
+    for (SidePanel *panel : host->panels)
+        panel->observe(telemetry);
     host->panels[host->active]->update(telemetry);
 }
 
@@ -157,11 +164,13 @@ void PanelHost::onGesture(lv_event_t *event) {
     const int count = static_cast<int>(host->panels.size());
     if (count < 2)
         return;
-    const lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_get_act());
-    if (dir == LV_DIR_LEFT)
-        host->show((host->active + 1) % count);
-    else if (dir == LV_DIR_RIGHT)
-        host->show((host->active + count - 1) % count);
+    lv_indev_t *indev = lv_indev_get_act();
+    const lv_dir_t dir = lv_indev_get_gesture_dir(indev);
+    if (dir != LV_DIR_LEFT && dir != LV_DIR_RIGHT)
+        return;
+    // Deleting the old panel resets the gesture state, so the rest of this drag would swipe again.
+    lv_indev_wait_release(indev);
+    host->show(dir == LV_DIR_LEFT ? (host->active + 1) % count : (host->active + count - 1) % count);
 }
 
 } // namespace widescreen

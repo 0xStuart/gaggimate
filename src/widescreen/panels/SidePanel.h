@@ -36,8 +36,9 @@ class SidePanel {
 
     virtual const char *id() const = 0; // stable key persisted in NVS
     virtual void create(lv_obj_t *parent, const PanelTheme &theme) = 0;
-    virtual void destroy() = 0; // drop pointers; the host deletes the objects
-    virtual void update(const Telemetry &telemetry) = 0;
+    virtual void destroy() = 0;                          // drop pointers; the host deletes the objects
+    virtual void update(const Telemetry &telemetry) = 0; // visible panel only
+    virtual void observe(const Telemetry &) {}           // every panel, visible or not
 };
 
 } // namespace widescreen

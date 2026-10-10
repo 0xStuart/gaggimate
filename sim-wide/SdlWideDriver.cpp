@@ -1,4 +1,4 @@
-// Widescreen variant of the SDL simulator panel (env display-sim-wide): a 1024x600
+// Widescreen variant of the SDL simulator display (env display-sim-wide): a 1024x600
 // window like the ESP32-P4-WIFI6-Touch-LCD-7B. The official UI keeps its own
 // 480x480 LVGL display, masked round and centred in the left half; the right half
 // is a second LVGL display owned by the side panel host. Replaces SdlDriver.cpp.
@@ -10,7 +10,7 @@
 #include <lvgl.h>
 #include <vector>
 #include <widescreen/Layout.h>
-#include <widescreen/panels/PanelHost.h>
+#include <widescreen/side_panels/SidePanelHost.h>
 
 using namespace widescreen;
 
@@ -123,8 +123,8 @@ void SdlDriver::init() {
     lv_init();
     // The island registers first so it stays the default display the official UI draws on.
     registerSurface(s_island, TouchOwner::Island, SDL_Rect{ISLAND_X, ISLAND_Y, ISLAND_SIZE, ISLAND_SIZE});
-    lv_disp_t *panelDisp = registerSurface(s_panel, TouchOwner::Panel, SDL_Rect{PANEL_X, 0, PANEL_W, PANEL_H});
-    PanelHost::instance().begin(panelDisp);
+    lv_disp_t *panelDisp = registerSurface(s_panel, TouchOwner::Panel, SDL_Rect{SIDE_PANEL_X, 0, SIDE_PANEL_W, SIDE_PANEL_H});
+    SidePanelHost::instance().begin(panelDisp);
 }
 
 void SdlDriver::pumpAndRender() {

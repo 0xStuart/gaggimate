@@ -5,11 +5,11 @@
 namespace widescreen {
 
 // Car-dashboard style dials for pressure, puck flow, weight and temperature.
-class GaugesPanel : public SidePanel {
+class GaugesSidePanel : public SidePanel {
   public:
     const char *id() const override { return "gauges"; }
     const char *name() const override { return "Gauges"; }
-    void create(lv_obj_t *parent, const PanelTheme &theme) override;
+    void create(lv_obj_t *parent, const SidePanelTheme &theme) override;
     void destroy() override;
     void update(const Telemetry &telemetry) override;
 
@@ -39,7 +39,7 @@ class GaugesPanel : public SidePanel {
     static constexpr int GAUGE_COUNT = 4;
 
     void createGauge(Gauge &gauge, const Spec &spec, lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_color_t color,
-                     const PanelTheme &theme);
+                     const SidePanelTheme &theme);
     static void setGauge(Gauge &gauge, float value, float target);
 
     Gauge gauges[GAUGE_COUNT];

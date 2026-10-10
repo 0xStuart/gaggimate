@@ -1,40 +1,40 @@
 #pragma once
 
-#include "PanelMenu.h"
-#include "PanelMode.h"
 #include "SidePanel.h"
+#include "SidePanelMenu.h"
+#include "SidePanelMode.h"
 #include <vector>
 
 namespace widescreen {
 
-struct PanelEntry {
+struct SidePanelEntry {
     SidePanel *panel;
     uint8_t shown;    // modeBit() set: panel is in the swipe rotation for that mode
     uint8_t defaults; // modeBit() set: panel is shown first when entering that mode
 };
 
 // Owns the right-half LVGL display: shows one SidePanel at a time, picks the
-// default panel for the machine's mode, rotates through that mode's panels on
-// horizontal swipes, opens the panel menu on a long press and feeds live telemetry.
-class PanelHost {
+// default side panel for the machine's mode, rotates through that mode's side panels on
+// horizontal swipes, opens the side panel menu on a long press and feeds live telemetry.
+class SidePanelHost {
   public:
-    static PanelHost &instance();
+    static SidePanelHost &instance();
 
     void add(SidePanel *panel, uint8_t shown, uint8_t defaults);
     void begin(lv_disp_t *disp); // call after the display is registered, on the LVGL thread
 
-    const std::vector<PanelEntry> &entries() const { return panels; }
-    void setShown(size_t index, PanelMode mode, bool on);
-    void setDefault(size_t index, PanelMode mode, bool on);
+    const std::vector<SidePanelEntry> &entries() const { return panels; }
+    void setShown(size_t index, SidePanelMode mode, bool on);
+    void setDefault(size_t index, SidePanelMode mode, bool on);
     void menuClosed();
-    PanelTheme currentTheme() const;
+    SidePanelTheme currentTheme() const;
 
   private:
-    PanelHost() = default;
+    SidePanelHost() = default;
 
     void loadFlags();
     void saveFlags(size_t index) const;
-    PanelMode detectMode();
+    SidePanelMode detectMode();
     bool isShown(int index) const;
     void showDefault();
     void show(int index);
@@ -47,13 +47,13 @@ class PanelHost {
     static void onGesture(lv_event_t *event);
     static void onPress(lv_event_t *event);
 
-    std::vector<PanelEntry> panels;
-    PanelMenu menu;
+    std::vector<SidePanelEntry> panels;
+    SidePanelMenu menu;
     lv_obj_t *screen = nullptr;
     lv_obj_t *content = nullptr;
     lv_obj_t *dots = nullptr;
     int active = -1;
-    PanelMode mode = PanelMode::Standby;
+    SidePanelMode mode = SidePanelMode::Standby;
     int themeIndex = -1;
     uint32_t brewStartMs = 0;
     uint32_t lastBrewMs = 0;

@@ -1,4 +1,4 @@
-#include "GraphPanel.h"
+#include "GraphSidePanel.h"
 
 #include <cmath>
 #include <cstdio>
@@ -41,13 +41,13 @@ static lv_coord_t normalise(float value, float low, float high) {
     return static_cast<lv_coord_t>(lroundf(LV_CLAMP(0.0f, ratio, 1.0f) * CHART_SCALE));
 }
 
-void GraphPanel::create(lv_obj_t *parent, const PanelTheme &theme) {
+void GraphSidePanel::create(lv_obj_t *parent, const SidePanelTheme &theme) {
     title = lv_label_create(parent);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_pos(title, MARGIN_X, 18);
 
     const lv_color_t legendColors[4] = {theme.blue, theme.accent, theme.amber, theme.red};
-    const lv_coord_t legendWidth = (PANEL_W - 2 * MARGIN_X) / 4;
+    const lv_coord_t legendWidth = (SIDE_PANEL_W - 2 * MARGIN_X) / 4;
     for (int i = 0; i < 4; i++) {
         legend[i] = lv_label_create(parent);
         lv_obj_set_style_text_font(legend[i], &lv_font_montserrat_16, 0);
@@ -92,7 +92,7 @@ void GraphPanel::create(lv_obj_t *parent, const PanelTheme &theme) {
     render(latest);
 }
 
-void GraphPanel::destroy() {
+void GraphSidePanel::destroy() {
     chart = nullptr;
     title = nullptr;
     for (lv_obj_t *&label : legend)
@@ -101,7 +101,7 @@ void GraphPanel::destroy() {
         s = nullptr;
 }
 
-void GraphPanel::observe(const Telemetry &t) {
+void GraphSidePanel::observe(const Telemetry &t) {
     latest = t;
     const uint32_t now = lv_tick_get();
     if (now - lastSampleMs < SAMPLE_INTERVAL_MS)
@@ -121,14 +121,14 @@ void GraphPanel::observe(const Telemetry &t) {
         samples.pop_front();
 }
 
-void GraphPanel::update(const Telemetry &t) {
+void GraphSidePanel::update(const Telemetry &t) {
     if (chart == nullptr || !sampled)
         return;
     sampled = false;
     render(t);
 }
 
-void GraphPanel::render(const Telemetry &t) {
+void GraphSidePanel::render(const Telemetry &t) {
     char buf[32];
     if (t.brewing) {
         snprintf(buf, sizeof(buf), "Shot  %lu:%02lu", static_cast<unsigned long>(t.brewMs / 60000),
@@ -201,8 +201,8 @@ void GraphPanel::render(const Telemetry &t) {
     lv_chart_refresh(chart);
 }
 
-void GraphPanel::drawPartCb(lv_event_t *event) {
-    auto *panel = static_cast<GraphPanel *>(lv_event_get_user_data(event));
+void GraphSidePanel::drawPartCb(lv_event_t *event) {
+    auto *panel = static_cast<GraphSidePanel *>(lv_event_get_user_data(event));
     auto *dsc = static_cast<lv_obj_draw_part_dsc_t *>(lv_event_get_param(event));
 
     if (dsc->part == LV_PART_TICKS && dsc->text != nullptr) {

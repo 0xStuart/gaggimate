@@ -1,4 +1,4 @@
-#include "ClockPanel.h"
+#include "ClockSidePanel.h"
 
 #include <ctime>
 #include <widescreen/Layout.h>
@@ -8,7 +8,7 @@ namespace widescreen {
 // Before NTP sync the RTC starts near 1970; don't show that as a real time.
 static constexpr int MIN_VALID_YEAR = 2024;
 
-void ClockPanel::create(lv_obj_t *parent, const PanelTheme &theme) {
+void ClockSidePanel::create(lv_obj_t *parent, const SidePanelTheme &theme) {
     meter = lv_meter_create(parent);
     lv_obj_set_size(meter, ISLAND_SIZE, ISLAND_SIZE);
     lv_obj_set_pos(meter, ISLAND_X, ISLAND_Y);
@@ -51,13 +51,13 @@ void ClockPanel::create(lv_obj_t *parent, const PanelTheme &theme) {
     update(Telemetry{});
 }
 
-void ClockPanel::destroy() {
+void ClockSidePanel::destroy() {
     meter = nullptr;
     hourHand = minuteHand = secondHand = nullptr;
     timeLabel = dateLabel = nullptr;
 }
 
-void ClockPanel::update(const Telemetry &) {
+void ClockSidePanel::update(const Telemetry &) {
     if (meter == nullptr)
         return;
     const time_t now = time(nullptr);

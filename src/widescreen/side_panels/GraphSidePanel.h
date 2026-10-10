@@ -7,14 +7,14 @@ namespace widescreen {
 
 // Rolling chart of pressure, puck flow, weight and temperature, like the web UI's
 // live chart: a 60 s window when idle, 30 s growing to 60 s during a shot.
-class GraphPanel : public SidePanel {
+class GraphSidePanel : public SidePanel {
   public:
     static constexpr int SERIES_COUNT = 6;
     static constexpr uint16_t POINT_COUNT = 200;
 
     const char *id() const override { return "graph"; }
     const char *name() const override { return "Graph"; }
-    void create(lv_obj_t *parent, const PanelTheme &theme) override;
+    void create(lv_obj_t *parent, const SidePanelTheme &theme) override;
     void destroy() override;
     void update(const Telemetry &telemetry) override;
     void observe(const Telemetry &telemetry) override;

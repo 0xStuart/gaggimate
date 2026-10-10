@@ -1,8 +1,8 @@
-#include "PanelHost.h"
+#include "SidePanelHost.h"
 
-#include "ClockPanel.h"
-#include "GaugesPanel.h"
-#include "GraphPanel.h"
+#include "ClockSidePanel.h"
+#include "GaugesSidePanel.h"
+#include "GraphSidePanel.h"
 #include <Preferences.h>
 #include <display/core/constants.h>
 #include <display/main.h>
@@ -22,26 +22,29 @@ static constexpr int DOTS_BOTTOM_MARGIN = 22;
 static constexpr int THEME_COUNT = 3;
 static constexpr const char *PREFS_NAMESPACE = "widescreen";
 
-static constexpr uint8_t ALL_ACTIVE_MODES = modeBit(PanelMode::BrewReady) | modeBit(PanelMode::Brewing) |
-                                            modeBit(PanelMode::Steam) | modeBit(PanelMode::Water) | modeBit(PanelMode::Grind);
+static constexpr uint8_t ALL_ACTIVE_MODES = modeBit(SidePanelMode::BrewReady) | modeBit(SidePanelMode::Brewing) |
+                                            modeBit(SidePanelMode::Steam) | modeBit(SidePanelMode::Water) |
+                                            modeBit(SidePanelMode::Grind);
 
-PanelHost &PanelHost::instance() {
-    static PanelHost host;
+SidePanelHost &SidePanelHost::instance() {
+    static SidePanelHost host;
     return host;
 }
 
-void PanelHost::add(SidePanel *panel, uint8_t shown, uint8_t defaults) {
-    panels.push_back(PanelEntry{panel, static_cast<uint8_t>(shown | defaults), defaults});
+void SidePanelHost::add(SidePanel *panel, uint8_t shown, uint8_t defaults) {
+    panels.push_back(SidePanelEntry{panel, static_cast<uint8_t>(shown | defaults), defaults});
 }
 
-void PanelHost::begin(lv_disp_t *disp) {
+void SidePanelHost::begin(lv_disp_t *disp) {
     if (panels.empty()) {
-        add(new ClockPanel(), modeBit(PanelMode::Standby), modeBit(PanelMode::Standby));
-        add(new GaugesPanel(), ALL_ACTIVE_MODES,
-            modeBit(PanelMode::BrewReady) | modeBit(PanelMode::Steam) | modeBit(PanelMode::Water) | modeBit(PanelMode::Grind));
-        add(new GraphPanel(),
-            modeBit(PanelMode::BrewReady) | modeBit(PanelMode::Brewing) | modeBit(PanelMode::Steam) | modeBit(PanelMode::Water),
-            modeBit(PanelMode::Brewing));
+        add(new ClockSidePanel(), modeBit(SidePanelMode::Standby), modeBit(SidePanelMode::Standby));
+        add(new GaugesSidePanel(), ALL_ACTIVE_MODES,
+            modeBit(SidePanelMode::BrewReady) | modeBit(SidePanelMode::Steam) | modeBit(SidePanelMode::Water) |
+                modeBit(SidePanelMode::Grind));
+        add(new GraphSidePanel(),
+            modeBit(SidePanelMode::BrewReady) | modeBit(SidePanelMode::Brewing) | modeBit(SidePanelMode::Steam) |
+                modeBit(SidePanelMode::Water),
+            modeBit(SidePanelMode::Brewing));
     }
     loadFlags();
 
@@ -65,10 +68,10 @@ void PanelHost::begin(lv_disp_t *disp) {
     lv_timer_create(onTimer, SAMPLE_INTERVAL_MS, this);
 }
 
-void PanelHost::loadFlags() {
+void SidePanelHost::loadFlags() {
     Preferences prefs;
     prefs.begin(PREFS_NAMESPACE, true);
-    for (PanelEntry &entry : panels) {
+    for (SidePanelEntry &entry : panels) {
         const std::string id = entry.panel->id();
         entry.shown = static_cast<uint8_t>(prefs.getUInt((id + "_s").c_str(), entry.shown));
         entry.defaults = static_cast<uint8_t>(prefs.getUInt((id + "_d").c_str(), entry.defaults));
@@ -76,8 +79,8 @@ void PanelHost::loadFlags() {
     prefs.end();
 }
 
-void PanelHost::saveFlags(size_t index) const {
-    const PanelEntry &entry = panels[index];
+void SidePanelHost::saveFlags(size_t index) const {
+    const SidePanelEntry &entry = panels[index];
     const std::string id = entry.panel->id();
     Preferences prefs;
     prefs.begin(PREFS_NAMESPACE, false);
@@ -86,8 +89,8 @@ void PanelHost::saveFlags(size_t index) const {
     prefs.end();
 }
 
-void PanelHost::setShown(size_t index, PanelMode m, bool on) {
-    PanelEntry &entry = panels[index];
+void SidePanelHost::setShown(size_t index, SidePanelMode m, bool on) {
+    SidePanelEntry &entry = panels[index];
     if (on) {
         entry.shown |= modeBit(m);
     } else {
@@ -97,8 +100,8 @@ void PanelHost::setShown(size_t index, PanelMode m, bool on) {
     saveFlags(index);
 }
 
-// A mode has at most one default panel, and a default panel is always shown.
-void PanelHost::setDefault(size_t index, PanelMode m, bool on) {
+// A mode has at most one default side panel, and a default side panel is always shown.
+void SidePanelHost::setDefault(size_t index, SidePanelMode m, bool on) {
     if (on) {
         for (size_t i = 0; i < panels.size(); i++) {
             if (i != index && (panels[i].defaults & modeBit(m))) {
@@ -114,32 +117,32 @@ void PanelHost::setDefault(size_t index, PanelMode m, bool on) {
     saveFlags(index);
 }
 
-PanelMode PanelHost::detectMode() {
+SidePanelMode SidePanelHost::detectMode() {
     const uint32_t now = lv_tick_get();
     if (controller.isBrewActive()) {
         hasBrewed = true;
         lastBrewMs = now;
-        return PanelMode::Brewing;
+        return SidePanelMode::Brewing;
     }
     switch (controller.getMode()) {
     case MODE_BREW:
-        return hasBrewed && now - lastBrewMs < BREW_LINGER_MS ? PanelMode::Brewing : PanelMode::BrewReady;
+        return hasBrewed && now - lastBrewMs < BREW_LINGER_MS ? SidePanelMode::Brewing : SidePanelMode::BrewReady;
     case MODE_STEAM:
-        return PanelMode::Steam;
+        return SidePanelMode::Steam;
     case MODE_WATER:
-        return PanelMode::Water;
+        return SidePanelMode::Water;
     case MODE_GRIND:
-        return PanelMode::Grind;
+        return SidePanelMode::Grind;
     default:
-        return PanelMode::Standby;
+        return SidePanelMode::Standby;
     }
 }
 
-bool PanelHost::isShown(int index) const {
+bool SidePanelHost::isShown(int index) const {
     return index >= 0 && index < static_cast<int>(panels.size()) && (panels[index].shown & modeBit(mode));
 }
 
-void PanelHost::showDefault() {
+void SidePanelHost::showDefault() {
     int fallback = -1;
     for (size_t i = 0; i < panels.size(); i++) {
         if (panels[i].defaults & modeBit(mode)) {
@@ -152,9 +155,9 @@ void PanelHost::showDefault() {
     show(fallback);
 }
 
-PanelTheme PanelHost::currentTheme() const {
+SidePanelTheme SidePanelHost::currentTheme() const {
     const uint32_t *c = theme_colors[themeIndex < 0 ? 0 : themeIndex];
-    return PanelTheme{
+    return SidePanelTheme{
         .text = lv_color_hex(c[0]),
         .background = lv_color_hex(c[1]),
         .accent = lv_color_hex(c[2]),
@@ -165,7 +168,7 @@ PanelTheme PanelHost::currentTheme() const {
     };
 }
 
-void PanelHost::hidePanel() {
+void SidePanelHost::hidePanel() {
     if (content != nullptr) {
         panels[active].panel->destroy();
         lv_obj_del(content);
@@ -173,7 +176,7 @@ void PanelHost::hidePanel() {
     }
 }
 
-void PanelHost::show(int index) {
+void SidePanelHost::show(int index) {
     hidePanel();
     if (themeIndex < 0) {
         const int themeMode = controller.getSettings().getThemeMode();
@@ -183,7 +186,7 @@ void PanelHost::show(int index) {
     if (active >= 0) {
         content = lv_obj_create(screen);
         lv_obj_remove_style_all(content);
-        lv_obj_set_size(content, PANEL_W, PANEL_H);
+        lv_obj_set_size(content, SIDE_PANEL_W, SIDE_PANEL_H);
         lv_obj_clear_flag(content, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
         lv_obj_move_background(content);
         panels[active].panel->create(content, currentTheme());
@@ -191,7 +194,7 @@ void PanelHost::show(int index) {
     updateDots();
 }
 
-void PanelHost::step(int direction) {
+void SidePanelHost::step(int direction) {
     const int count = static_cast<int>(panels.size());
     for (int offset = 1; offset < count; offset++) {
         const int candidate = ((active < 0 ? 0 : active) + direction * offset + count * count) % count;
@@ -202,10 +205,10 @@ void PanelHost::step(int direction) {
     }
 }
 
-void PanelHost::updateDots() {
+void SidePanelHost::updateDots() {
     lv_obj_clean(dots);
     int shownCount = 0;
-    const PanelTheme theme = currentTheme();
+    const SidePanelTheme theme = currentTheme();
     for (size_t i = 0; i < panels.size(); i++) {
         if (!isShown(static_cast<int>(i)))
             continue;
@@ -225,14 +228,14 @@ void PanelHost::updateDots() {
         lv_obj_clear_flag(dots, LV_OBJ_FLAG_HIDDEN);
 }
 
-void PanelHost::menuClosed() {
+void SidePanelHost::menuClosed() {
     if (isShown(active))
         show(active);
     else
         showDefault();
 }
 
-void PanelHost::sample(Telemetry &t) {
+void SidePanelHost::sample(Telemetry &t) {
     t.temp = controller.getCurrentTemp();
     t.targetTemp = controller.getTargetTemp();
     t.pressure = controller.getCurrentPressure();
@@ -249,15 +252,15 @@ void PanelHost::sample(Telemetry &t) {
     t.brewMs = t.brewing ? now - brewStartMs : 0;
 }
 
-void PanelHost::onTimer(lv_timer_t *timer) {
-    auto *host = static_cast<PanelHost *>(timer->user_data);
+void SidePanelHost::onTimer(lv_timer_t *timer) {
+    auto *host = static_cast<SidePanelHost *>(timer->user_data);
 
     Telemetry telemetry;
     host->sample(telemetry);
-    for (PanelEntry &entry : host->panels)
+    for (SidePanelEntry &entry : host->panels)
         entry.panel->observe(telemetry);
 
-    const PanelMode newMode = host->detectMode();
+    const SidePanelMode newMode = host->detectMode();
     if (host->menu.isOpen()) {
         host->mode = newMode;
         return;
@@ -277,8 +280,8 @@ void PanelHost::onTimer(lv_timer_t *timer) {
         host->panels[host->active].panel->update(telemetry);
 }
 
-void PanelHost::onGesture(lv_event_t *event) {
-    auto *host = static_cast<PanelHost *>(lv_event_get_user_data(event));
+void SidePanelHost::onGesture(lv_event_t *event) {
+    auto *host = static_cast<SidePanelHost *>(lv_event_get_user_data(event));
     if (host->menu.isOpen())
         return;
     lv_indev_t *indev = lv_indev_get_act();
@@ -286,13 +289,13 @@ void PanelHost::onGesture(lv_event_t *event) {
     if (dir != LV_DIR_LEFT && dir != LV_DIR_RIGHT)
         return;
     host->longPressArmed = false;
-    // Deleting the old panel resets the gesture state, so the rest of this drag would swipe again.
+    // Deleting the old side panel resets the gesture state, so the rest of this drag would swipe again.
     lv_indev_wait_release(indev);
     host->step(dir == LV_DIR_LEFT ? 1 : -1);
 }
 
-void PanelHost::onPress(lv_event_t *event) {
-    auto *host = static_cast<PanelHost *>(lv_event_get_user_data(event));
+void SidePanelHost::onPress(lv_event_t *event) {
+    auto *host = static_cast<SidePanelHost *>(lv_event_get_user_data(event));
     const lv_event_code_t code = lv_event_get_code(event);
     lv_indev_t *indev = lv_indev_get_act();
     if (indev == nullptr)

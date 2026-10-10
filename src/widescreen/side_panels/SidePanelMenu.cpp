@@ -1,6 +1,6 @@
-#include "PanelMenu.h"
+#include "SidePanelMenu.h"
 
-#include "PanelHost.h"
+#include "SidePanelHost.h"
 #include <cstdint>
 #include <string>
 #include <widescreen/Layout.h>
@@ -23,23 +23,23 @@ static constexpr lv_coord_t DEFAULT_COLUMN_X = 430;
 
 enum Column { SHOW, DEFAULT };
 
-static std::string defaultSummary(const PanelEntry &entry) {
+static std::string defaultSummary(const SidePanelEntry &entry) {
     std::string summary;
-    for (int m = 0; m < PANEL_MODE_COUNT; m++) {
-        if (entry.defaults & modeBit(static_cast<PanelMode>(m))) {
+    for (int m = 0; m < SIDE_PANEL_MODE_COUNT; m++) {
+        if (entry.defaults & modeBit(static_cast<SidePanelMode>(m))) {
             summary += summary.empty() ? "Default: " : ", ";
-            summary += modeName(static_cast<PanelMode>(m));
+            summary += modeName(static_cast<SidePanelMode>(m));
         }
     }
     return summary.empty() ? "Not a default" : summary;
 }
 
-void PanelMenu::open(lv_obj_t *screen, PanelHost &panelHost) {
+void SidePanelMenu::open(lv_obj_t *screen, SidePanelHost &panelHost) {
     host = &panelHost;
     theme = host->currentTheme();
     root = lv_obj_create(screen);
     lv_obj_remove_style_all(root);
-    lv_obj_set_size(root, PANEL_W, PANEL_H);
+    lv_obj_set_size(root, SIDE_PANEL_W, SIDE_PANEL_H);
     lv_obj_set_style_bg_color(root, theme.background, 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
@@ -47,7 +47,7 @@ void PanelMenu::open(lv_obj_t *screen, PanelHost &panelHost) {
     showList();
 }
 
-void PanelMenu::close() {
+void SidePanelMenu::close() {
     if (root == nullptr)
         return;
     lv_obj_del(root);
@@ -56,7 +56,7 @@ void PanelMenu::close() {
         row[SHOW] = row[DEFAULT] = nullptr;
 }
 
-lv_obj_t *PanelMenu::addButton(lv_obj_t *parent, const char *text, lv_coord_t width, lv_coord_t height) {
+lv_obj_t *SidePanelMenu::addButton(lv_obj_t *parent, const char *text, lv_coord_t width, lv_coord_t height) {
     lv_obj_t *button = lv_btn_create(parent);
     lv_obj_set_size(button, width, height);
     lv_obj_set_style_radius(button, 12, 0);
@@ -73,7 +73,7 @@ lv_obj_t *PanelMenu::addButton(lv_obj_t *parent, const char *text, lv_coord_t wi
     return button;
 }
 
-lv_obj_t *PanelMenu::addHeader(const char *title, const char *buttonText, lv_event_cb_t onButton) {
+lv_obj_t *SidePanelMenu::addHeader(const char *title, const char *buttonText, lv_event_cb_t onButton) {
     lv_obj_t *label = lv_label_create(root);
     lv_label_set_text(label, title);
     lv_obj_set_style_text_color(label, theme.text, 0);
@@ -81,12 +81,12 @@ lv_obj_t *PanelMenu::addHeader(const char *title, const char *buttonText, lv_eve
     lv_obj_set_pos(label, MARGIN, 26);
 
     lv_obj_t *button = addButton(root, buttonText, HEADER_BUTTON_W, HEADER_BUTTON_H);
-    lv_obj_set_pos(button, PANEL_W - MARGIN - HEADER_BUTTON_W, 16);
+    lv_obj_set_pos(button, SIDE_PANEL_W - MARGIN - HEADER_BUTTON_W, 16);
     lv_obj_add_event_cb(button, onButton, LV_EVENT_CLICKED, this);
     return button;
 }
 
-void PanelMenu::showList() {
+void SidePanelMenu::showList() {
     lv_obj_clean(root);
     for (auto &row : switches)
         row[SHOW] = row[DEFAULT] = nullptr;
@@ -94,7 +94,7 @@ void PanelMenu::showList() {
 
     const auto &entries = host->entries();
     for (size_t i = 0; i < entries.size(); i++) {
-        lv_obj_t *button = addButton(root, nullptr, PANEL_W - 2 * MARGIN, LIST_ROW_H);
+        lv_obj_t *button = addButton(root, nullptr, SIDE_PANEL_W - 2 * MARGIN, LIST_ROW_H);
         lv_obj_set_pos(button, MARGIN, LIST_TOP + static_cast<lv_coord_t>(i) * (LIST_ROW_H + LIST_ROW_GAP));
         lv_obj_set_user_data(button, reinterpret_cast<void *>(static_cast<uintptr_t>(i)));
         lv_obj_add_event_cb(button, onPanelSelected, LV_EVENT_CLICKED, this);
@@ -118,7 +118,7 @@ void PanelMenu::showList() {
     }
 }
 
-void PanelMenu::showPanel(size_t index) {
+void SidePanelMenu::showPanel(size_t index) {
     selected = index;
     lv_obj_clean(root);
     addHeader(host->entries()[index].panel->name(), LV_SYMBOL_LEFT " Back", onBack);
@@ -135,10 +135,10 @@ void PanelMenu::showPanel(size_t index) {
         lv_obj_set_x(label, columnX[c] + (SWITCH_W - lv_obj_get_width(label)) / 2);
     }
 
-    for (int m = 0; m < PANEL_MODE_COUNT; m++) {
+    for (int m = 0; m < SIDE_PANEL_MODE_COUNT; m++) {
         const lv_coord_t rowY = ROWS_TOP + m * ROW_H;
         lv_obj_t *label = lv_label_create(root);
-        lv_label_set_text(label, modeName(static_cast<PanelMode>(m)));
+        lv_label_set_text(label, modeName(static_cast<SidePanelMode>(m)));
         lv_obj_set_style_text_color(label, theme.text, 0);
         lv_obj_set_style_text_font(label, &lv_font_montserrat_18, 0);
         lv_obj_set_pos(label, MARGIN, rowY + 6);
@@ -158,10 +158,10 @@ void PanelMenu::showPanel(size_t index) {
     refreshSwitches();
 }
 
-void PanelMenu::refreshSwitches() {
-    const PanelEntry &entry = host->entries()[selected];
-    for (int m = 0; m < PANEL_MODE_COUNT; m++) {
-        const uint8_t bit = modeBit(static_cast<PanelMode>(m));
+void SidePanelMenu::refreshSwitches() {
+    const SidePanelEntry &entry = host->entries()[selected];
+    for (int m = 0; m < SIDE_PANEL_MODE_COUNT; m++) {
+        const uint8_t bit = modeBit(static_cast<SidePanelMode>(m));
         const bool flags[2] = {(entry.shown & bit) != 0, (entry.defaults & bit) != 0};
         for (int c = 0; c < 2; c++) {
             if (flags[c])
@@ -173,36 +173,36 @@ void PanelMenu::refreshSwitches() {
 }
 
 // Page changes rebuild the overlay, which deletes the button being clicked, so defer them.
-void PanelMenu::onDone(lv_event_t *event) {
+void SidePanelMenu::onDone(lv_event_t *event) {
     lv_async_call(
         [](void *data) {
-            auto *menu = static_cast<PanelMenu *>(data);
+            auto *menu = static_cast<SidePanelMenu *>(data);
             menu->close();
             menu->host->menuClosed();
         },
         lv_event_get_user_data(event));
 }
 
-void PanelMenu::onBack(lv_event_t *event) {
-    lv_async_call([](void *data) { static_cast<PanelMenu *>(data)->showList(); }, lv_event_get_user_data(event));
+void SidePanelMenu::onBack(lv_event_t *event) {
+    lv_async_call([](void *data) { static_cast<SidePanelMenu *>(data)->showList(); }, lv_event_get_user_data(event));
 }
 
-void PanelMenu::onPanelSelected(lv_event_t *event) {
-    auto *menu = static_cast<PanelMenu *>(lv_event_get_user_data(event));
+void SidePanelMenu::onPanelSelected(lv_event_t *event) {
+    auto *menu = static_cast<SidePanelMenu *>(lv_event_get_user_data(event));
     menu->selected = static_cast<size_t>(reinterpret_cast<uintptr_t>(lv_obj_get_user_data(lv_event_get_target(event))));
     lv_async_call(
         [](void *data) {
-            auto *m = static_cast<PanelMenu *>(data);
+            auto *m = static_cast<SidePanelMenu *>(data);
             m->showPanel(m->selected);
         },
         menu);
 }
 
-void PanelMenu::onSwitch(lv_event_t *event) {
-    auto *menu = static_cast<PanelMenu *>(lv_event_get_user_data(event));
+void SidePanelMenu::onSwitch(lv_event_t *event) {
+    auto *menu = static_cast<SidePanelMenu *>(lv_event_get_user_data(event));
     lv_obj_t *sw = lv_event_get_target(event);
     const auto code = static_cast<int>(reinterpret_cast<uintptr_t>(lv_obj_get_user_data(sw)));
-    const auto mode = static_cast<PanelMode>(code / 2);
+    const auto mode = static_cast<SidePanelMode>(code / 2);
     const bool on = lv_obj_has_state(sw, LV_STATE_CHECKED);
     if (code % 2 == SHOW)
         menu->host->setShown(menu->selected, mode, on);

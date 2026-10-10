@@ -5,11 +5,11 @@
 namespace widescreen {
 
 // Analog clock the same size as the round UI, mirroring it on the right half.
-class ClockPanel : public SidePanel {
+class ClockSidePanel : public SidePanel {
   public:
     const char *id() const override { return "clock"; }
     const char *name() const override { return "Clock"; }
-    void create(lv_obj_t *parent, const PanelTheme &theme) override;
+    void create(lv_obj_t *parent, const SidePanelTheme &theme) override;
     void destroy() override;
     void update(const Telemetry &telemetry) override;
 

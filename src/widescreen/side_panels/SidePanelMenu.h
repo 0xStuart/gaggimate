@@ -1,18 +1,18 @@
 #pragma once
 
-#include "PanelMode.h"
 #include "SidePanel.h"
+#include "SidePanelMode.h"
 #include <cstddef>
 
 namespace widescreen {
 
-class PanelHost;
+class SidePanelHost;
 
 // Full-height overlay on the right half, opened by a long press: lists the side
-// panels, and per panel shows "Show" / "Default" switches for every machine mode.
-class PanelMenu {
+// panels, and per side panel shows "Show" / "Default" switches for every machine mode.
+class SidePanelMenu {
   public:
-    void open(lv_obj_t *screen, PanelHost &host);
+    void open(lv_obj_t *screen, SidePanelHost &host);
     void close();
     bool isOpen() const { return root != nullptr; }
 
@@ -28,11 +28,11 @@ class PanelMenu {
     static void onPanelSelected(lv_event_t *event);
     static void onSwitch(lv_event_t *event);
 
-    PanelHost *host = nullptr;
-    PanelTheme theme{};
+    SidePanelHost *host = nullptr;
+    SidePanelTheme theme{};
     lv_obj_t *root = nullptr;
     size_t selected = 0;
-    lv_obj_t *switches[PANEL_MODE_COUNT][2] = {};
+    lv_obj_t *switches[SIDE_PANEL_MODE_COUNT][2] = {};
 };
 
 } // namespace widescreen

@@ -1,4 +1,4 @@
-#include "GaugesPanel.h"
+#include "GaugesSidePanel.h"
 
 #include <cmath>
 #include <cstdio>
@@ -19,19 +19,19 @@ static constexpr uint16_t TARGET_WIDTH = 20;
 static constexpr float TARGET_SPAN = 0.015f; // fraction of the range covered by the target mark
 static constexpr float NEEDLE_SMOOTHING = 0.35f;
 
-static const GaugesPanel::Spec PRESSURE{"PRESSURE", "bar", 0.0f, 12.0f, 2.0f, 4, 1};
-static const GaugesPanel::Spec FLOW{"FLOW", "ml/s", 0.0f, 8.0f, 2.0f, 4, 1};
-static const GaugesPanel::Spec WEIGHT{"WEIGHT", "g", 0.0f, 60.0f, 10.0f, 5, 1};
-static const GaugesPanel::Spec TEMPERATURE{"TEMP",
-                                           "\xC2\xB0"
-                                           "C",
-                                           20.0f,
-                                           160.0f,
-                                           20.0f,
-                                           4,
-                                           1};
+static const GaugesSidePanel::Spec PRESSURE{"PRESSURE", "bar", 0.0f, 12.0f, 2.0f, 4, 1};
+static const GaugesSidePanel::Spec FLOW{"FLOW", "ml/s", 0.0f, 8.0f, 2.0f, 4, 1};
+static const GaugesSidePanel::Spec WEIGHT{"WEIGHT", "g", 0.0f, 60.0f, 10.0f, 5, 1};
+static const GaugesSidePanel::Spec TEMPERATURE{"TEMP",
+                                               "\xC2\xB0"
+                                               "C",
+                                               20.0f,
+                                               160.0f,
+                                               20.0f,
+                                               4,
+                                               1};
 
-static int toScale(const GaugesPanel::Spec &spec, float value) {
+static int toScale(const GaugesSidePanel::Spec &spec, float value) {
     const float clamped = value < spec.min ? spec.min : (value > spec.max ? spec.max : value);
     return static_cast<int>(lroundf(clamped * VALUE_SCALE));
 }
@@ -45,8 +45,8 @@ static void tickLabelCb(lv_event_t *event) {
     dsc->text = buf;
 }
 
-void GaugesPanel::create(lv_obj_t *parent, const PanelTheme &theme) {
-    const lv_coord_t left = (PANEL_W - 2 * GAUGE_SIZE - GAUGE_GAP_X) / 2;
+void GaugesSidePanel::create(lv_obj_t *parent, const SidePanelTheme &theme) {
+    const lv_coord_t left = (SIDE_PANEL_W - 2 * GAUGE_SIZE - GAUGE_GAP_X) / 2;
     const lv_coord_t right = left + GAUGE_SIZE + GAUGE_GAP_X;
     const lv_coord_t bottom = GAUGE_TOP + GAUGE_SIZE + GAUGE_GAP_Y;
     createGauge(gauges[0], PRESSURE, parent, left, GAUGE_TOP, theme.blue, theme);
@@ -55,8 +55,8 @@ void GaugesPanel::create(lv_obj_t *parent, const PanelTheme &theme) {
     createGauge(gauges[3], TEMPERATURE, parent, right, bottom, theme.red, theme);
 }
 
-void GaugesPanel::createGauge(Gauge &gauge, const Spec &spec, lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_color_t color,
-                              const PanelTheme &theme) {
+void GaugesSidePanel::createGauge(Gauge &gauge, const Spec &spec, lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_color_t color,
+                                  const SidePanelTheme &theme) {
     gauge = Gauge{};
     gauge.spec = &spec;
     gauge.shown = spec.min;
@@ -119,12 +119,12 @@ void GaugesPanel::createGauge(Gauge &gauge, const Spec &spec, lv_obj_t *parent, 
     lv_obj_align(unit, LV_ALIGN_CENTER, 0, 74);
 }
 
-void GaugesPanel::destroy() {
+void GaugesSidePanel::destroy() {
     for (Gauge &gauge : gauges)
         gauge = Gauge{};
 }
 
-void GaugesPanel::update(const Telemetry &t) {
+void GaugesSidePanel::update(const Telemetry &t) {
     if (gauges[0].meter == nullptr)
         return;
     setGauge(gauges[0], t.pressure, t.targetPressure);
@@ -133,7 +133,7 @@ void GaugesPanel::update(const Telemetry &t) {
     setGauge(gauges[3], t.temp, t.targetTemp);
 }
 
-void GaugesPanel::setGauge(Gauge &gauge, float value, float target) {
+void GaugesSidePanel::setGauge(Gauge &gauge, float value, float target) {
     const Spec &spec = *gauge.spec;
     gauge.shown += (value - gauge.shown) * NEEDLE_SMOOTHING;
     const int scaled = toScale(spec, gauge.shown);

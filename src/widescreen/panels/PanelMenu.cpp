@@ -116,12 +116,6 @@ void PanelMenu::showList() {
         lv_obj_set_style_text_color(arrow, theme.muted, 0);
         lv_obj_align(arrow, LV_ALIGN_RIGHT_MID, -4, 0);
     }
-
-    lv_obj_t *hint = lv_label_create(root);
-    lv_label_set_text(hint, "Hold the right side for 3 s to open this menu");
-    lv_obj_set_style_text_color(hint, theme.muted, 0);
-    lv_obj_set_style_text_font(hint, &lv_font_montserrat_14, 0);
-    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -MARGIN);
 }
 
 void PanelMenu::showPanel(size_t index) {

@@ -13,7 +13,7 @@
 namespace widescreen {
 
 static constexpr uint32_t SAMPLE_INTERVAL_MS = 100;
-static constexpr uint32_t LONG_PRESS_MS = 3000;
+static constexpr uint32_t LONG_PRESS_MS = 2000;
 static constexpr lv_coord_t LONG_PRESS_SLOP = 24; // finger drift still counted as holding
 static constexpr uint32_t BREW_LINGER_MS = 15000; // stay in Brewing after the shot so its graph stays up
 static constexpr int DOT_SIZE = 10;

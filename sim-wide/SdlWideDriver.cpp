@@ -4,6 +4,7 @@
 // is a second LVGL display owned by the side panel host. Replaces SdlDriver.cpp.
 #include "SdlDriver.h"
 
+#include "DemoShots.h"
 #include <SDL.h>
 #include <cstdlib>
 #include <display/main.h>
@@ -136,6 +137,7 @@ void SdlDriver::init() {
     // The island registers first so it stays the default display the official UI draws on.
     registerSurface(s_island, TouchOwner::Island, SDL_Rect{ISLAND_X, ISLAND_Y, ISLAND_SIZE, ISLAND_SIZE});
     lv_disp_t *panelDisp = registerSurface(s_panel, TouchOwner::Panel, SDL_Rect{SIDE_PANEL_X, 0, SIDE_PANEL_W, SIDE_PANEL_H});
+    seedDemoShots();
     SidePanelHost::instance().begin(panelDisp);
 }
 

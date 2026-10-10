@@ -3,6 +3,7 @@
 #include "ClockSidePanel.h"
 #include "GaugesSidePanel.h"
 #include "GraphSidePanel.h"
+#include "LastShotSidePanel.h"
 #include <Preferences.h>
 #include <display/core/constants.h>
 #include <display/main.h>
@@ -45,6 +46,7 @@ void SidePanelHost::begin(lv_disp_t *disp) {
             modeBit(SidePanelMode::BrewReady) | modeBit(SidePanelMode::Brewing) | modeBit(SidePanelMode::Steam) |
                 modeBit(SidePanelMode::Water),
             modeBit(SidePanelMode::Brewing));
+        add(new LastShotSidePanel(), modeBit(SidePanelMode::Standby) | modeBit(SidePanelMode::BrewReady), 0);
     }
     loadFlags();
 

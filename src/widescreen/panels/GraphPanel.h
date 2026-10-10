@@ -13,6 +13,7 @@ class GraphPanel : public SidePanel {
     static constexpr uint16_t POINT_COUNT = 200;
 
     const char *id() const override { return "graph"; }
+    const char *name() const override { return "Graph"; }
     void create(lv_obj_t *parent, const PanelTheme &theme) override;
     void destroy() override;
     void update(const Telemetry &telemetry) override;

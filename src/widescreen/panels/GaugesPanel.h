@@ -8,6 +8,7 @@ namespace widescreen {
 class GaugesPanel : public SidePanel {
   public:
     const char *id() const override { return "gauges"; }
+    const char *name() const override { return "Gauges"; }
     void create(lv_obj_t *parent, const PanelTheme &theme) override;
     void destroy() override;
     void update(const Telemetry &telemetry) override;

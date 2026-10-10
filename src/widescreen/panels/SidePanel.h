@@ -1,0 +1,43 @@
+#pragma once
+
+#include <cstdint>
+#include <lvgl.h>
+
+namespace widescreen {
+
+struct Telemetry {
+    float temp = 0.0f;
+    float targetTemp = 0.0f;
+    float pressure = 0.0f;
+    float targetPressure = 0.0f;
+    float flow = 0.0f; // puck flow, matching the web UI chart
+    float targetFlow = 0.0f;
+    float weight = 0.0f;
+    bool brewing = false;
+    uint32_t brewMs = 0;
+};
+
+// Colours from the active GaggiMate theme (see theme_colors in the EEZ screens).
+struct PanelTheme {
+    lv_color_t text;
+    lv_color_t background;
+    lv_color_t accent;
+    lv_color_t muted;
+    lv_color_t red;
+    lv_color_t blue;
+    lv_color_t amber;
+};
+
+// A swappable view on the right half of the widescreen display. Only the visible
+// panel exists: create() builds its objects, destroy() is just deleting the parent.
+class SidePanel {
+  public:
+    virtual ~SidePanel() = default;
+
+    virtual const char *id() const = 0; // stable key persisted in NVS
+    virtual void create(lv_obj_t *parent, const PanelTheme &theme) = 0;
+    virtual void destroy() = 0; // drop pointers; the host deletes the objects
+    virtual void update(const Telemetry &telemetry) = 0;
+};
+
+} // namespace widescreen

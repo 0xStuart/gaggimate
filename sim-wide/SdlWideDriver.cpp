@@ -39,6 +39,10 @@ Surface s_panel;
 int s_mouseX = 0;
 int s_mouseY = 0;
 bool s_mousePressed = false;
+// A tap shorter than one LVGL input read (fast taps, synthetic clicks) would be lost,
+// so a release is held back until the press has been reported once.
+bool s_pressSeen = false;
+bool s_releasePending = false;
 TouchOwner s_touchOwner = TouchOwner::None;
 bool s_quit = false;
 
@@ -57,7 +61,15 @@ void touch_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
     const int y = s_mouseY - surface->rect.y;
     data->point.x = LV_CLAMP(0, x, surface->rect.w - 1);
     data->point.y = LV_CLAMP(0, y, surface->rect.h - 1);
-    data->state = s_mousePressed && s_touchOwner == surface->owner ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+    const bool pressed = s_mousePressed && s_touchOwner == surface->owner;
+    data->state = pressed ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+    if (pressed) {
+        s_pressSeen = true;
+        if (s_releasePending) {
+            s_mousePressed = false;
+            s_releasePending = false;
+        }
+    }
 }
 
 bool inside(const SDL_Rect &r, int x, int y) { return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; }
@@ -141,6 +153,8 @@ void SdlDriver::pumpAndRender() {
         case SDL_MOUSEBUTTONDOWN:
             if (e.button.button == SDL_BUTTON_LEFT) {
                 s_mousePressed = true;
+                s_pressSeen = false;
+                s_releasePending = false;
                 s_mouseX = e.button.x;
                 s_mouseY = e.button.y;
                 s_touchOwner = inside(s_island.rect, s_mouseX, s_mouseY)  ? TouchOwner::Island
@@ -149,8 +163,12 @@ void SdlDriver::pumpAndRender() {
             }
             break;
         case SDL_MOUSEBUTTONUP:
-            if (e.button.button == SDL_BUTTON_LEFT)
-                s_mousePressed = false;
+            if (e.button.button == SDL_BUTTON_LEFT) {
+                if (s_pressSeen || s_touchOwner == TouchOwner::None)
+                    s_mousePressed = false;
+                else
+                    s_releasePending = true;
+            }
             break;
         case SDL_KEYDOWN:
         case SDL_KEYUP: // keys 1/2 act as the brew/steam inputs of the controller board

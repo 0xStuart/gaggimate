@@ -1,5 +1,5 @@
-// Widescreen variant of the SDL simulator display (env display-sim-wide): a 1024x600
-// window like the ESP32-P4-WIFI6-Touch-LCD-7B. The official UI keeps its own
+// SDL simulator for the Waveshare ESP32-P4 7B (env display-sim-waveshare-esp32-p4-7b):
+// a 1024x600 window. The official UI keeps its own
 // 480x480 LVGL display, masked round and centred in the left half; the right half
 // is a second LVGL display owned by the side panel host. Replaces SdlDriver.cpp.
 #include "SdlDriver.h"
@@ -10,10 +10,10 @@
 #include <display/main.h>
 #include <lvgl.h>
 #include <vector>
-#include <widescreen/Layout.h>
-#include <widescreen/side_panels/SidePanelHost.h>
+#include <Waveshare-ESP32-P4-7B/Layout.h>
+#include <Waveshare-ESP32-P4-7B/side_panels/SidePanelHost.h>
 
-using namespace widescreen;
+using namespace waveshare_esp32_p4_7b;
 
 SdlDriver *SdlDriver::instance = nullptr;
 
@@ -128,7 +128,7 @@ void SdlDriver::init() {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         exit(1);
     }
-    s_window = SDL_CreateWindow("GaggiMate Simulator (widescreen)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_W,
+    s_window = SDL_CreateWindow("GaggiMate Simulator (Waveshare ESP32-P4 7B)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_W,
                                 SCREEN_H, SDL_WINDOW_SHOWN);
     s_renderer = SDL_CreateRenderer(s_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     buildIslandMask();

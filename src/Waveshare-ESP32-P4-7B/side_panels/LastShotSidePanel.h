@@ -3,7 +3,7 @@
 #include "SidePanel.h"
 #include <display/models/shot_log_format.h>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 // The latest saved shot from the shot history: time, yield, ratio and peak pressure
 // above a chart of the whole shot. Arrow buttons page back through older shots.
@@ -63,4 +63,4 @@ class LastShotSidePanel : public SidePanel {
     lv_coord_t points[SERIES_COUNT][POINT_COUNT] = {};
 };
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build the widescreen simulator for the browser (WebAssembly via Emscripten).
+"""Build the Waveshare ESP32-P4 7B simulator for the browser (WebAssembly via Emscripten).
 
 The source list and flags come from PlatformIO's compile database for
-env:display-sim-wide, so this stays in step with platformio.ini. Each file is
+env:display-sim-waveshare-esp32-p4-7b, so this stays in step with platformio.ini. Each file is
 recompiled with emcc/em++ and linked into a static site.
 
     source ~/emsdk/emsdk_env.sh
@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ENV = "display-sim-wide"
+ENV = "display-sim-waveshare-esp32-p4-7b"
 OUT = ROOT / ".pio" / "build" / "display-web"
 SITE = OUT / "site"
 WEB_DIR = Path(__file__).resolve().parent

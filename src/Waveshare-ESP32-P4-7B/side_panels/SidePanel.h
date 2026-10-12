@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <lvgl.h>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 struct Telemetry {
     float temp = 0.0f;
@@ -28,7 +28,7 @@ struct SidePanelTheme {
     lv_color_t amber;
 };
 
-// A swappable view on the right half of the widescreen display. Only the visible
+// A swappable view on the right half of the Waveshare ESP32-P4 7B. Only the visible
 // side panel exists: create() builds its objects, destroy() is just deleting the parent.
 class SidePanel {
   public:
@@ -42,4 +42,4 @@ class SidePanel {
     virtual void observe(const Telemetry &) {}           // every panel, visible or not
 };
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

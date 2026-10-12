@@ -3,7 +3,7 @@
 #include "SidePanel.h"
 #include <deque>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 // Rolling chart of pressure, puck flow, weight and temperature, like the web UI's
 // live chart: a 60 s window when idle, 30 s growing to 60 s during a shot.
@@ -45,4 +45,4 @@ class GraphSidePanel : public SidePanel {
     float pumpRange = 0.0f;
 };
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

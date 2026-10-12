@@ -71,6 +71,8 @@ unchanged except for a few small `#ifndef GAGGIMATE_SIM` guards.
 
 The PlatformIO env is `[env:display-sim]` (`platform = native`) in `platformio.ini`.
 
+The Waveshare ESP32-P4 7B (1024×600) uses a separate env: `pio run -e display-sim-waveshare-esp32-p4-7b -t run`. Its driver is `sim-Waveshare-ESP32-P4-7B/`; layout and side panels are `src/Waveshare-ESP32-P4-7B/`.
+
 ## Caveats
 
 - **Compiled out** for the desktop: MQTT/HomeAssistant, HomeKit, mDNS, the WiFi

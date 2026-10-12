@@ -4,7 +4,7 @@
 #include "SidePanelMode.h"
 #include <cstddef>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 class SidePanelHost;
 
@@ -35,4 +35,4 @@ class SidePanelMenu {
     lv_obj_t *switches[SIDE_PANEL_MODE_COUNT][2] = {};
 };
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

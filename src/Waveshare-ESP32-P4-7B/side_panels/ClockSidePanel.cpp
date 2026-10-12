@@ -1,9 +1,9 @@
 #include "ClockSidePanel.h"
 
 #include <ctime>
-#include <widescreen/Layout.h>
+#include <Waveshare-ESP32-P4-7B/Layout.h>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 // Before NTP sync the RTC starts near 1970; don't show that as a real time.
 static constexpr int MIN_VALID_YEAR = 2024;
@@ -84,4 +84,4 @@ void ClockSidePanel::update(const Telemetry &) {
     lv_label_set_text(dateLabel, buf);
 }
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

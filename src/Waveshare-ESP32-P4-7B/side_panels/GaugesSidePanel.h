@@ -2,7 +2,7 @@
 
 #include "SidePanel.h"
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 // Car-dashboard style dials for pressure, puck flow, weight and temperature.
 class GaugesSidePanel : public SidePanel {
@@ -45,4 +45,4 @@ class GaugesSidePanel : public SidePanel {
     Gauge gauges[GAUGE_COUNT];
 };
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

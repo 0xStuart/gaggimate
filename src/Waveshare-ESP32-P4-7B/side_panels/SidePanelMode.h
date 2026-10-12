@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 // What the machine is doing, as far as the side panels care. Each panel has a
 // "shown" and a "default" flag per mode.
@@ -31,4 +31,4 @@ inline const char *modeName(SidePanelMode mode) {
     }
 }
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

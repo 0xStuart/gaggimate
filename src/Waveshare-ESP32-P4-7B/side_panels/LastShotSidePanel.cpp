@@ -9,9 +9,9 @@
 #include <ctime>
 #include <display/main.h>
 #include <display/plugins/ShotHistoryPlugin.h>
-#include <widescreen/Layout.h>
+#include <Waveshare-ESP32-P4-7B/Layout.h>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 // Same series, colours and per-series normalisation as GraphSidePanel.
 enum Series { PRESSURE, TARGET_PRESSURE, FLOW, TARGET_FLOW, TEMPERATURE, WEIGHT };
@@ -482,4 +482,4 @@ void LastShotSidePanel::drawPartCb(lv_event_t *event) {
     }
 }
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

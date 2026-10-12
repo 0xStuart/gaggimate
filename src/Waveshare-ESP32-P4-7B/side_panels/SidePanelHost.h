@@ -5,7 +5,7 @@
 #include "SidePanelMode.h"
 #include <vector>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 struct SidePanelEntry {
     SidePanel *panel;
@@ -64,4 +64,4 @@ class SidePanelHost {
     bool longPressArmed = false;
 };
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

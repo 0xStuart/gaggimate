@@ -3,9 +3,9 @@
 #include "SidePanelHost.h"
 #include <cstdint>
 #include <string>
-#include <widescreen/Layout.h>
+#include <Waveshare-ESP32-P4-7B/Layout.h>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 static constexpr lv_coord_t MARGIN = 24;
 static constexpr lv_coord_t HEADER_BUTTON_W = 110;
@@ -211,4 +211,4 @@ void SidePanelMenu::onSwitch(lv_event_t *event) {
     menu->refreshSwitches();
 }
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

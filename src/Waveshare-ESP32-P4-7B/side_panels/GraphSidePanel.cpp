@@ -2,9 +2,9 @@
 
 #include <cmath>
 #include <cstdio>
-#include <widescreen/Layout.h>
+#include <Waveshare-ESP32-P4-7B/Layout.h>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 // Series order and colours follow the round UI's shot chart; every series is
 // normalised to 0..CHART_SCALE of its own range, as there are more units than axes.
@@ -227,4 +227,4 @@ void GraphSidePanel::drawPartCb(lv_event_t *event) {
     }
 }
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

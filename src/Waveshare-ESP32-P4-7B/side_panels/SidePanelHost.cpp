@@ -9,9 +9,9 @@
 #include <display/main.h>
 #include <display/ui/default/eez/screens.h>
 #include <string>
-#include <widescreen/Layout.h>
+#include <Waveshare-ESP32-P4-7B/Layout.h>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 static constexpr uint32_t SAMPLE_INTERVAL_MS = 100;
 static constexpr uint32_t LONG_PRESS_MS = 2000;
@@ -21,7 +21,8 @@ static constexpr int DOT_SIZE = 10;
 static constexpr int DOT_GAP = 14;
 static constexpr int DOTS_BOTTOM_MARGIN = 22;
 static constexpr int THEME_COUNT = 3;
-static constexpr const char *PREFS_NAMESPACE = "widescreen";
+// NVS namespaces are limited to 15 characters. This is the Waveshare ESP32-P4 7B.
+static constexpr const char *PREFS_NAMESPACE = "ws_p4_7b";
 
 static constexpr uint8_t ALL_ACTIVE_MODES = modeBit(SidePanelMode::BrewReady) | modeBit(SidePanelMode::Brewing) |
                                             modeBit(SidePanelMode::Steam) | modeBit(SidePanelMode::Water) |
@@ -324,4 +325,4 @@ void SidePanelHost::onPress(lv_event_t *event) {
     }
 }
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

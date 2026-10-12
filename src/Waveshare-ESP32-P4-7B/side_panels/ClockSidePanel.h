@@ -2,7 +2,7 @@
 
 #include "SidePanel.h"
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 // Analog clock the same size as the round UI, mirroring it on the right half.
 class ClockSidePanel : public SidePanel {
@@ -23,4 +23,4 @@ class ClockSidePanel : public SidePanel {
     long lastSecond = -1;
 };
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

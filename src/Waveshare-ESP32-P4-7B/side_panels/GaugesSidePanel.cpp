@@ -2,9 +2,9 @@
 
 #include <cmath>
 #include <cstdio>
-#include <widescreen/Layout.h>
+#include <Waveshare-ESP32-P4-7B/Layout.h>
 
-namespace widescreen {
+namespace waveshare_esp32_p4_7b {
 
 // lv_meter only takes integers, so every scale runs in tenths of its unit.
 static constexpr int VALUE_SCALE = 10;
@@ -158,4 +158,4 @@ void GaugesSidePanel::setGauge(Gauge &gauge, float value, float target) {
     }
 }
 
-} // namespace widescreen
+} // namespace waveshare_esp32_p4_7b

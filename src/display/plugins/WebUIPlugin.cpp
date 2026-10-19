@@ -327,8 +327,8 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
         request->arg("wifiPassword") != "---unchanged---";
 #endif
     if (request->method() == HTTP_POST) {
-        ESP_LOGI("WebUIPlugin", "settings POST: args=%u wifiSsid=%d wifiPassword=%d", request->args(),
-                 request->hasArg("wifiSsid") ? 1 : 0, request->hasArg("wifiPassword") ? 1 : 0);
+        ESP_LOGI("WebUIPlugin", "settings POST: wifiSsid=%d wifiPassword=%d", request->hasArg("wifiSsid") ? 1 : 0,
+                 request->hasArg("wifiPassword") ? 1 : 0);
         controller->getSettings().batchUpdate([request](Settings *settings) {
             if (request->hasArg("startupMode"))
                 settings->setStartupMode(request->arg("startupMode") == "brew" ? MODE_BREW : MODE_STANDBY);

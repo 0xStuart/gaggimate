@@ -16,4 +16,18 @@ The official 480×480 UI stays an island on the left. Side panels live in `src/W
 
 Simulator: `pio run -e display-sim-waveshare-esp32-p4-7b -t run` (driver in `sim-Waveshare-ESP32-P4-7B/`, needs `libsdl2-dev`). Browser build: `source ~/emsdk/emsdk_env.sh && python3 sim-web/build.py --serve`.
 
+## Hardware spike (go)
+
+`[env:display-p4-spike]` is an isolated USB flash + ESP-Hosted Wi‑Fi/BLE check under `src/Waveshare-ESP32-P4-7B/spike/`. It does **not** build the GaggiMate UI.
+
+**Verdict (2026-10-19, Stuart's 7B, rev v3.2 / eco7):** **GO** — USB flash works; Wi‑Fi scan returned networks through the C6; BLE (NimBLE over Hosted) scanned advertisers. Optional STA / GATT connect needs a local `wifi_secrets.h` (gitignored).
+
+Practical notes:
+
+- USB port is Espressif `303A:1001` → `/dev/ttyACM1` here (`ttyACM0` is the Pico). Prefer the `by-id` Espressif symlink.
+- Platform: `pioarduino` **55.03.38** (Arduino 3.3.8). **55.03.31-2 bootloops** on eco7.
+- Flash with **esptool ≥ 5.3** (5.6 works). PlatformIO's older bundled esptool fails USB-JTAG baud changes on this board.
+- System Python 3.14 is too new for some pioarduino checks; use `.venv-pio` (Python 3.12): `scripts/flash_p4_spike.sh`.
+- Hosted host firmware (2.12.3) is newer than the stock C6 slave (reported 0.0.0); Wi‑Fi/BLE still work. C6 update is optional later.
+
 `p4-port` is based on upstream, not on fork-only features. Do not bring ArduinoOTA or other fork-only changes onto this branch.

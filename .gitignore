@@ -16,5 +16,10 @@ src/display/webassets/
 sim_data/
 *.bmp
 
+# Local Wi-Fi / BLE names for the P4 hardware spike (never commit credentials)
+src/Waveshare-ESP32-P4-7B/spike/wifi_secrets.h
+# Local Python 3.12 PlatformIO venv (system python is 3.14; pioarduino wants ≤3.13)
+.venv-pio/
+
 # Local release staging (scripts/release.sh)
 out/

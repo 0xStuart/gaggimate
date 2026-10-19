@@ -1,0 +1,46 @@
+{
+  "build": {
+    "core": "esp32",
+    "extra_flags": [
+      "-DARDUINO_USB_CDC_ON_BOOT=1",
+      "-DARDUINO_USB_MODE=1",
+      "-DBOARD_HAS_PSRAM",
+      "-DWAVESHARE_ESP32_P4_7B"
+    ],
+    "f_cpu": "400000000L",
+    "f_flash": "80000000L",
+    "f_psram": "200000000L",
+    "flash_mode": "qio",
+    "hwids": [["0x303A", "0x1001"]],
+    "mcu": "esp32p4",
+    "chip_variant": "esp32p4",
+    "variant": "esp32p4"
+  },
+  "arduino": {
+    "partitions": "default_16MB.csv"
+  },
+  "connectivity": [
+    "wifi",
+    "bluetooth"
+  ],
+  "debug": {
+    "default_tool": "esp-builtin",
+    "onboard_tools": ["esp-builtin"],
+    "openocd_target": "esp32p4.cfg"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "Waveshare ESP32-P4 7B (ESP32-P4-WIFI6-Touch-LCD-7B)",
+  "upload": {
+    "flash_size": "16MB",
+    "maximum_ram_size": 512000,
+    "maximum_size": 16777216,
+    "require_upload_port": true,
+    "speed": 460800
+  },
+
+  "url": "https://www.waveshare.com/wiki/ESP32-P4-WIFI6-Touch-LCD-7B",
+  "vendor": "Waveshare"
+}

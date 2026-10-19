@@ -37,6 +37,11 @@ You can buy your kit on https://shop.gaggimate.eu/
 
 The display allows you to control the espresso machine and see live temperature updates. If the machine becomes unresponsive or the temperature goes too high, it will automatically turn off for safety.
 
+## Waveshare ESP32-P4 7B (this fork)
+
+Port for the **Waveshare ESP32-P4 7B** (1024×600 island + side panels).  
+**[Try the browser emulator](https://0xstuart.github.io/gaggimate/p4-sim/)** · full notes in [`src/Waveshare-ESP32-P4-7B/README.md`](src/Waveshare-ESP32-P4-7B/README.md).
+
 ## Docs
 
 The docs were moved to [https://gaggimate.eu/](https://gaggimate.eu/). You can find all sourcing and assembly information there.

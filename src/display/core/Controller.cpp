@@ -1,6 +1,8 @@
 #include "Controller.h"
 #include "ArduinoJson.h"
+#ifndef WAVESHARE_ESP32_P4_7B
 #include "esp_coexist.h"
+#endif
 #include "esp_sntp.h"
 #include <LittleFS.h>
 #include <SD_MMC.h>
@@ -26,7 +28,9 @@
 #include <display/util/FsUtil.h>
 #ifndef GAGGIMATE_SIM // network/BLE plugins are device-only
 #include <display/plugins/BLEScalePlugin.h>
+#ifndef WAVESHARE_ESP32_P4_7B
 #include <display/plugins/HomekitPlugin.h>
+#endif
 #include <display/plugins/ImprovPlugin.h>
 #include <display/plugins/MQTTPlugin.h>
 #include <display/plugins/NetworkWatchdogPlugin.h>
@@ -37,6 +41,8 @@
 #ifndef GAGGIMATE_HEADLESS
 #ifdef GAGGIMATE_SIM
 #include <SdlDriver.h> // desktop SDL panel stands in for the hardware drivers
+#elif defined(WAVESHARE_ESP32_P4_7B)
+#include <Waveshare-ESP32-P4-7B/WaveshareEsp32P47BDriver.h>
 #else
 #include <Preferences.h>
 #include <display/drivers/AmoledDisplayDriver.h>
@@ -88,10 +94,15 @@ void Controller::setup() {
     profileManager = new ProfileManager(fs, "/p", settings, pluginManager);
     profileManager->setup();
 #ifndef GAGGIMATE_SIM // mDNS/HomeKit are device-only
+#if defined(WAVESHARE_ESP32_P4_7B)
+    // HomeSpan does not support ESP32-P4 yet; always use mDNS on this board.
+    pluginManager->registerPlugin(new mDNSPlugin());
+#else
     if (settings.isHomekit())
         pluginManager->registerPlugin(new HomekitPlugin(settings.getWifiSsid(), settings.getWifiPassword()));
     else
         pluginManager->registerPlugin(new mDNSPlugin());
+#endif
 #endif
     if (settings.isBoilerFillActive()) {
         pluginManager->registerPlugin(new BoilerFillPlugin());
@@ -193,6 +204,10 @@ void Controller::setupPanel() {
 #ifdef GAGGIMATE_SIM
     driver = SdlDriver::getInstance(); // desktop SDL panel
     driver->init();
+#elif defined(WAVESHARE_ESP32_P4_7B)
+    driver = waveshare_esp32_p4_7b::WaveshareEsp32P47BDriver::getInstance();
+    gaugeSetpointsInside = false;
+    driver->init();
 #else
     // The panel can't change after flashing, so cache the detection result in NVS
     // and skip the multi-second probing chain on subsequent boots (GM-140).
@@ -283,7 +298,7 @@ void Controller::setupBluetooth() {
         }
     });
     comms.onSystemInfo([this](const char *hardware, const char *version, uint32_t protocolVersion, bool dimming, bool pressure,
-                              bool ledControl, bool tof, bool dualBoiler, vector<uint32_t> addons) {
+                              bool ledControl, bool tof, bool dualBoiler, std::vector<uint32_t> addons) {
         onSystemInfo(hardware, version, protocolVersion, dimming, pressure, ledControl, tof, dualBoiler, addons);
     });
     comms.onIncompatibleController([this](const String &info) { onIncompatibleController(info); });
@@ -291,7 +306,10 @@ void Controller::setupBluetooth() {
         if (event.getString("component") != "display") {
             connLowLatency = true;
             comms.setLowLatency(true);
+#ifndef WAVESHARE_ESP32_P4_7B
+            // Native Wi‑Fi/BT coexist; on P4 radio is on the C6 via ESP-Hosted.
             esp_coex_preference_set(ESP_COEX_PREFER_BT);
+#endif
         }
     });
     pluginManager->on("ota:update:end", [this](Event const &) { applyConnectionPriority(true); });
@@ -384,7 +402,7 @@ void Controller::setupBluetooth() {
 }
 
 void Controller::onSystemInfo(const char *hardware, const char *version, uint32_t protocolVersion, bool dimming, bool pressure,
-                              bool ledControl, bool tof, bool dualBoiler, vector<uint32_t> addons) {
+                              bool ledControl, bool tof, bool dualBoiler, std::vector<uint32_t> addons) {
     const bool mismatch = protocolVersion != gm_proto::PROTOCOL_VERSION;
     systemInfo = SystemInfo{.hardware = String(hardware),
                             .version = String(version),
@@ -530,7 +548,12 @@ void Controller::setupWifi() {
         WiFi.mode(WIFI_AP);
         WiFi.softAPConfig(WIFI_AP_IP, WIFI_AP_IP, WIFI_SUBNET_MASK);
         WiFi.softAP(WIFI_AP_SSID, secured ? apPassword.c_str() : nullptr);
+#ifdef WAVESHARE_ESP32_P4_7B
+        // C6 over Hosted + MIPI panel on USB-only power browns out at 19.5 dBm (reset=POWERON loop).
+        WiFi.setTxPower(WIFI_POWER_8_5dBm);
+#else
         WiFi.setTxPower(WIFI_POWER_19_5dBm);
+#endif
         // Credentials block so headless users can read the AP login from serial.
         ESP_LOGI(LOG_TAG, "========================================");
         ESP_LOGI(LOG_TAG, "  WiFi Access Point started");
@@ -810,7 +833,9 @@ void Controller::applyConnectionPriority(bool force) {
     if (force || lowLatency != connLowLatency) {
         connLowLatency = lowLatency;
         comms.setLowLatency(lowLatency);
+#ifndef WAVESHARE_ESP32_P4_7B
         esp_coex_preference_set(lowLatency ? ESP_COEX_PREFER_BT : ESP_COEX_PREFER_WIFI);
+#endif
     }
 }
 

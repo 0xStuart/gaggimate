@@ -1,0 +1,55 @@
+# Build the Waveshare ESP32-P4 7B browser simulator and publish to GitHub Pages.
+# Site URL: https://0xstuart.github.io/gaggimate/p4-sim/
+name: Deploy P4 browser sim
+
+on:
+  push:
+    branches: [p4-port]
+    paths:
+      - "sim-web/**"
+      - "sim-Waveshare-ESP32-P4-7B/**"
+      - "sim/**"
+      - "src/Waveshare-ESP32-P4-7B/**"
+      - "src/display/**"
+      - "platformio.ini"
+      - ".github/workflows/deploy-p4-sim.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
+          pip install --upgrade platformio
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.74
+
+      - name: Build browser sim
+        run: |
+          source emsdk_env.sh
+          python3 sim-web/build.py
+
+      - name: Publish to gh-pages/p4-sim
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .pio/build/display-web/site
+          destination_dir: p4-sim
+          publish_branch: gh-pages

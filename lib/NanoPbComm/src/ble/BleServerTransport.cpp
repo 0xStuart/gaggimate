@@ -1,4 +1,16 @@
 #include "BleServerTransport.h"
+
+#if GM_NIMBLE_V2
+// Display-only P4 build: controller peripheral transport is not linked into product paths.
+void BleServerTransport::init(const String &, bool) {}
+void BleServerTransport::startAdvertising() {}
+void BleServerTransport::setInfo(const String &) {}
+bool BleServerTransport::send(const uint8_t *, size_t) { return false; }
+bool BleServerTransport::isConnected() const { return false; }
+void BleServerTransport::disconnect() {}
+void BleServerTransport::clearBonds() {}
+#else
+
 #include <Preferences.h>
 
 // Paired display address in our own NVS; the pairing is strictly one PCB <-> one screen, unlike the bond store.
@@ -283,3 +295,5 @@ void BleServerTransport::onWrite(NimBLECharacteristic *characteristic) {
 void BleServerTransport::onSubscribe(NimBLECharacteristic *pCharacteristic, ble_gap_conn_desc *desc, uint16_t subValue) {
     emitConnection(true);
 }
+
+#endif // !GM_NIMBLE_V2

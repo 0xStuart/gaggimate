@@ -20,11 +20,14 @@ Import("env")  # noqa: F821 -- provided by PlatformIO/SCons
 project_dir = env["PROJECT_DIR"]  # noqa: F821
 out_dir = os.path.join(project_dir, "src", "display", "webassets")
 manifest = os.path.join(out_dir, "web_ui_manifest.h")
+blob_s = os.path.join(out_dir, "web_ui_blob.S")
 packer = os.path.join(project_dir, "scripts", "embed_webui.py")
 blob_bin = os.path.join(out_dir, "web_ui.bin")
 
-if not os.path.isfile(manifest):
-    print("embed_webui_pre: no web bundle found, writing stub (run build_webui.sh for the real UI)")
+# Need both the C++ manifest and the assembler blob; an old partial stub
+# (bin + manifest, no .S) must be repaired or the link fails on gWebUiBlobStart.
+if not os.path.isfile(manifest) or not os.path.isfile(blob_s):
+    print("embed_webui_pre: incomplete web bundle, writing stub (run build_webui.sh for the real UI)")
     subprocess.check_call([sys.executable, packer, "--out", out_dir, "--stub"])
 
 # web_ui_blob.S only .incbin's web_ui.bin; without this, a rebuilt bundle updates

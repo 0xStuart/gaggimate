@@ -20,12 +20,20 @@ bool EspHttpTransport::begin(const std::string &url) {
         return false;
     }
     _url = url;
+#if defined(arduino_esp_crt_bundle_set)
     arduino_esp_crt_bundle_set(x509_crt_imported_bundle_bin_start);
+#elif defined(esp_crt_bundle_set)
+    esp_crt_bundle_set(x509_crt_imported_bundle_bin_start);
+#endif
     esp_http_client_config_t config = {};
     config.url = _url.c_str();
     config.event_handler = onEvent;
     config.user_data = this;
+#if defined(arduino_esp_crt_bundle_attach)
     config.crt_bundle_attach = arduino_esp_crt_bundle_attach;
+#else
+    config.crt_bundle_attach = esp_crt_bundle_attach;
+#endif
     config.timeout_ms = _timeoutMs;
     config.buffer_size = 2048;    // rx: header lines, including the ~1.3 KB signed CDN Location
     config.buffer_size_tx = 4096; // tx: the request line carries the signed CDN path after the redirect

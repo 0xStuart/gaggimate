@@ -3,6 +3,7 @@
 #include "ResumableDownloader.h"
 #include "common.h"
 #include "semver_extensions.h"
+#include <esp_idf_version.h>
 #include <esp_ota_ops.h>
 #include <esp_task_wdt.h>
 #include <sdkconfig.h>
@@ -12,8 +13,20 @@
 // the update instead of unsubscribing anyone: a real hang still reboots, just later.
 struct OtaWatchdogRelax {
     static constexpr uint32_t UPDATE_TIMEOUT_S = 60;
-    OtaWatchdogRelax() { esp_task_wdt_init(UPDATE_TIMEOUT_S, true); }
-    ~OtaWatchdogRelax() { esp_task_wdt_init(CONFIG_ESP_TASK_WDT_TIMEOUT_S, true); }
+    static void initSeconds(uint32_t seconds) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+        esp_task_wdt_config_t cfg = {
+            .timeout_ms = seconds * 1000,
+            .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
+            .trigger_panic = true,
+        };
+        esp_task_wdt_reconfigure(&cfg);
+#else
+        esp_task_wdt_init(seconds, true);
+#endif
+    }
+    OtaWatchdogRelax() { initSeconds(UPDATE_TIMEOUT_S); }
+    ~OtaWatchdogRelax() { initSeconds(CONFIG_ESP_TASK_WDT_TIMEOUT_S); }
 };
 
 GitHubOTA::GitHubOTA(const String &display_version, const String &controller_version, const String &release_url,
@@ -29,7 +42,13 @@ GitHubOTA::GitHubOTA(const String &display_version, const String &controller_ver
     _phase_callback = phase_callback;
     _progress_callback = progress_callback;
 
+#if defined(CONFIG_NIMBLE_CPP_IDF) || (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0))
+    extern const uint8_t x509_crt_imported_bundle_bin_end[] asm("_binary_x509_crt_bundle_end");
+    _wifi_client.setCACertBundle(x509_crt_imported_bundle_bin_start,
+                                 static_cast<size_t>(x509_crt_imported_bundle_bin_end - x509_crt_imported_bundle_bin_start));
+#else
     _wifi_client.setCACertBundle(x509_crt_imported_bundle_bin_start);
+#endif
 }
 
 void GitHubOTA::init() {

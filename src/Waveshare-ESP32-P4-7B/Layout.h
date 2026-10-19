@@ -2,6 +2,10 @@
 // The official 480x480 round UI is centred in the left half; side panels own the right half.
 #pragma once
 
+// Panel is upside-down relative to the usual mounting. Display 180° is done in
+// the EK79007 via MIPI 0x36 (UPDN+SHLR); GT911 coords are mirrored in software.
+#define ROTATE_180 1
+
 namespace waveshare_esp32_p4_7b {
 
 constexpr int SCREEN_W = 1024;

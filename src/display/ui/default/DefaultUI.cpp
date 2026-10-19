@@ -7,9 +7,11 @@
 #include <display/core/process/Process.h>
 #include <display/core/zones.h>
 #ifndef GAGGIMATE_SIM // hardware panel drivers are device-only
+#ifndef WAVESHARE_ESP32_P4_7B
 #include <display/drivers/AmoledDisplayDriver.h>
 #include <display/drivers/LilyGoDriver.h>
 #include <display/drivers/WaveshareDriver.h>
+#endif
 #include <display/drivers/common/LV_Helper.h>
 #endif
 #include <cmath>
@@ -1351,7 +1353,8 @@ String DefaultUI::getErrorMessage() { return controller->getSystemStateMessage()
 void DefaultUI::applyTheme() {
     const ::Settings &settings = controller->getSettings();
     int newThemeMode = settings.getThemeMode();
-#ifndef GAGGIMATE_SIM // Amoled-specific black theme override is device-only
+#if !defined(GAGGIMATE_SIM) && !defined(WAVESHARE_ESP32_P4_7B)
+    // Amoled-specific black theme override is device-only (not on P4 island).
     if (newThemeMode == 0 && panelDriver == AmoledDisplayDriver::getInstance()) {
         newThemeMode = THEME_ID_AMOLED_DARK;
     }

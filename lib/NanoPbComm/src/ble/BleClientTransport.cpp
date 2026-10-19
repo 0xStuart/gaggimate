@@ -7,10 +7,12 @@ static constexpr const char *NVS_PEER_KEY = "peer";
 
 void BleClientTransport::init(const String &deviceName) {
     NimBLEDevice::init(deviceName.c_str());
-    NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+    gmSetTxPower();
     NimBLEDevice::setMTU(BLE_MTU);
+#if !GM_NIMBLE_V2
     if (int rc = ble_gap_write_sugg_def_data_len(BLE_DLE_OCTETS, BLE_DLE_TIME_US); rc != 0)
         ESP_LOGW(LOG_TAG, "Setting suggested data length failed: %d", rc);
+#endif
     // Just Works bonding with LE Secure Connections, mirroring the controller.
     NimBLEDevice::setSecurityAuth(true, false, true);
     NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
@@ -27,14 +29,23 @@ void BleClientTransport::init(const String &deviceName) {
 
 void BleClientTransport::scan() {
     _readyForConnection = false;
+#if GM_NIMBLE_V2
+    _scanner->clearResults();
+    _scanner->setScanCallbacks(this, true);
+#else
     _scanner->clearDuplicateCache();
     _scanner->setAdvertisedDeviceCallbacks(this, true);
+#endif
     _scanner->setInterval(1000);
     _scanner->setWindow(50);
     _scanner->setMaxResults(0);
     _scanner->setDuplicateFilter(false);
     _scanner->setActiveScan(false);
+#if GM_NIMBLE_V2
+    _scanner->start(0, false, false); // 0 = continuous
+#else
     _scanner->start(0, nullptr, false); // 0 = continuous
+#endif
 }
 
 void BleClientTransport::maintain() {
@@ -84,9 +95,11 @@ bool BleClientTransport::connectToServer() {
         }
     }
 
+#if !GM_NIMBLE_V2
     // ATT MTU does not enlarge link-layer packets. Request DLE on the machine
     // link so telemetry needs fewer radio fragments when a BLE scale is also connected.
     _client->setDataLen(BLE_DLE_OCTETS);
+#endif
 
     NimBLERemoteService *service = _client->getService(NimBLEUUID(gm_proto::SERVICE_UUID));
     if (service == nullptr) {
@@ -168,7 +181,7 @@ void BleClientTransport::savePairedPeer(const NimBLEAddress &address) {
     if (!prefs.begin(NVS_NAMESPACE, false))
         return;
     uint8_t buf[7];
-    memcpy(buf, address.getNative(), 6);
+    memcpy(buf, gmAddrBytes(address), 6);
     buf[6] = address.getType();
     prefs.putBytes(NVS_PEER_KEY, buf, sizeof(buf));
     prefs.end();
@@ -232,7 +245,7 @@ int BleClientTransport::requestConnParams(uint16_t minInterval, uint16_t maxInte
     params.supervision_timeout = CONN_TIMEOUT;
     params.min_ce_len = BLE_GAP_INITIAL_CONN_MIN_CE_LEN;
     params.max_ce_len = BLE_GAP_INITIAL_CONN_MAX_CE_LEN;
-    const int rc = ble_gap_update_params(_client->getConnId(), &params);
+    const int rc = ble_gap_update_params(gmConnHandle(_client), &params);
     if (rc == 0)
         ESP_LOGI(LOG_TAG, "Requested %.2f-%.2f ms connection interval", minInterval * 1.25f, maxInterval * 1.25f);
     else
@@ -244,7 +257,7 @@ int BleClientTransport::requestConnParams(uint16_t minInterval, uint16_t maxInte
 void BleClientTransport::logOtherLinks() const {
     for (uint16_t handle = 0; handle < CONFIG_BT_NIMBLE_MAX_CONNECTIONS; handle++) {
         ble_gap_conn_desc desc;
-        if (handle == _client->getConnId() || ble_gap_conn_find(handle, &desc) != 0)
+        if (handle == gmConnHandle(_client) || ble_gap_conn_find(handle, &desc) != 0)
             continue;
         ESP_LOGW(LOG_TAG, "Other link %u: interval %u ms, latency %u, timeout %u ms", handle, desc.conn_itvl * 5 / 4,
                  desc.conn_latency, desc.supervision_timeout * 10);
@@ -263,12 +276,16 @@ bool BleClientTransport::isEncrypted() const {
     if (_client == nullptr || !_client->isConnected())
         return false;
     ble_gap_conn_desc desc;
-    if (ble_gap_conn_find(_client->getConnId(), &desc) != 0)
+    if (ble_gap_conn_find(gmConnHandle(_client), &desc) != 0)
         return false;
     return desc.sec_state.encrypted;
 }
 
+#if GM_NIMBLE_V2
+void BleClientTransport::onResult(const NimBLEAdvertisedDevice *advertisedDevice) {
+#else
 void BleClientTransport::onResult(NimBLEAdvertisedDevice *advertisedDevice) {
+#endif
     if (_havePairedPeer) {
         // Our controller advertises directed PDUs, which carry no payload -- match on address alone.
         if (advertisedDevice->getAddress() != _pairedPeer)
@@ -295,7 +312,7 @@ void BleClientTransport::onResult(NimBLEAdvertisedDevice *advertisedDevice) {
     _readyForConnection = true;
 }
 
-bool BleClientTransport::isLockedToOther(NimBLEAdvertisedDevice *advertisedDevice) const {
+bool BleClientTransport::isLockedToOther(const NimBLEAdvertisedDevice *advertisedDevice) const {
     // Lock owner is broadcast as mfg data: 0xFFFF + paired display address in native order, zeros when unpaired.
     if (!advertisedDevice->haveManufacturerData())
         return false;
@@ -307,10 +324,15 @@ bool BleClientTransport::isLockedToOther(NimBLEAdvertisedDevice *advertisedDevic
     if (memcmp(owner, zeros, sizeof(zeros)) == 0)
         return false; // open for pairing
     // Locked to us is fine (we lost NVS, controller kept the pairing); compare raw native bytes -- no NimBLEAddress round-trip.
-    return memcmp(owner, NimBLEDevice::getAddress().getNative(), sizeof(zeros)) != 0;
+    return memcmp(owner, gmAddrBytes(NimBLEDevice::getAddress()), sizeof(zeros)) != 0;
 }
 
+#if GM_NIMBLE_V2
+void BleClientTransport::onDisconnect(NimBLEClient *client, int reason) {
+    (void)reason;
+#else
 void BleClientTransport::onDisconnect(NimBLEClient *client) {
+#endif
     (void)client;
     ESP_LOGI(LOG_TAG, "Disconnected, will rescan");
     _writeChar = nullptr;

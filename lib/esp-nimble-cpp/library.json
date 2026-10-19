@@ -1,0 +1,21 @@
+{
+  "name": "esp-nimble-cpp",
+  "version": "2.3.4",
+  "description": "NimBLE C++ wrapper for ESP-IDF / Arduino 3.x (ESP32-P4 via ESP-Hosted)",
+  "keywords": "BLE, NimBLE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/h2zero/esp-nimble-cpp.git"
+  },
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "build": {
+    "includeDir": "src",
+    "srcDir": "src",
+    "libArchive": false,
+    "flags": [
+      "-DCONFIG_NIMBLE_CPP_IDF=1",
+      "-DCONFIG_NIMBLE_CPP_LOG_LEVEL=2"
+    ]
+  }
+}

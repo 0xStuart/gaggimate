@@ -131,8 +131,11 @@ void BLEScalePlugin::loop() {
         if (scale != nullptr) {
             // Entering standby powers the scale off too; a no-op for drivers without shutdown support.
             if (shutdownPending && scale->isConnected()) {
+#if !defined(CONFIG_NIMBLE_CPP_IDF)
+                // ble-scales v1: power the scale off. v2 (P4) has no shutdown(); disconnect is enough.
                 scale->shutdown();
                 delay(100);
+#endif
             }
             disconnect();
         }

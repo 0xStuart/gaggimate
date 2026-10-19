@@ -1,5 +1,8 @@
 {
   "build": {
+    "arduino": {
+      "partitions": "default_16MB.csv"
+    },
     "core": "esp32",
     "extra_flags": [
       "-DARDUINO_USB_CDC_ON_BOOT=1",
@@ -15,9 +18,6 @@
     "mcu": "esp32p4",
     "chip_variant": "esp32p4",
     "variant": "esp32p4"
-  },
-  "arduino": {
-    "partitions": "default_16MB.csv"
   },
   "connectivity": [
     "wifi",
@@ -40,7 +40,6 @@
     "require_upload_port": true,
     "speed": 460800
   },
-
   "url": "https://www.waveshare.com/wiki/ESP32-P4-WIFI6-Touch-LCD-7B",
   "vendor": "Waveshare"
 }

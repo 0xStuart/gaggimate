@@ -4,12 +4,33 @@
 #include "../Protocol.h"
 #include "../Transport.h"
 #include "BleConstants.h"
-#include <NimBLEDevice.h>
-#include <ble_ota_dfu.hpp>
+#include "NimBLECompat.h"
 
-// BLE peripheral (server) transport for the controller: RX write / TX notify chars (one datagram each) + OTA DFU service.
-// Pairing: bonds one display on first boot, then directed-advertises to it only until clearBonds(); comms require encryption.
-// A boot-time pairing window (steam switch held at power-on) re-opens advertising so a replacement display can take over.
+#if !GM_NIMBLE_V2
+#include <ble_ota_dfu.hpp>
+#endif
+
+// BLE peripheral (server) transport for the controller.
+// On ESP32-P4 display builds (CONFIG_NIMBLE_CPP_IDF) this is a compile stub — the
+// display only uses BleClientTransport. Full implementation stays on NimBLE 1.4 boards.
+#if GM_NIMBLE_V2
+
+class BleServerTransport : public Transport {
+  public:
+    BleServerTransport() = default;
+    void init(const String &deviceName, bool pairingWindow = false);
+    void startAdvertising();
+    void setInfo(const String &info);
+    bool send(const uint8_t *data, size_t length) override;
+    bool isConnected() const override;
+    size_t maxDatagram() const override { return BLE_MAX_DATAGRAM; }
+    bool isUpdating() const { return false; }
+    void disconnect();
+    void clearBonds();
+};
+
+#else
+
 class BleServerTransport : public Transport, public NimBLEServerCallbacks, public NimBLECharacteristicCallbacks {
   public:
     BleServerTransport() = default;
@@ -67,5 +88,7 @@ class BleServerTransport : public Transport, public NimBLEServerCallbacks, publi
 
     static constexpr const char *LOG_TAG = "BleServerTransport";
 };
+
+#endif // GM_NIMBLE_V2
 
 #endif // NANOPBCOMM_BLE_SERVER_TRANSPORT_H

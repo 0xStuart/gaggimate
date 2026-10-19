@@ -103,9 +103,32 @@ def compile_one(job):
     return source, result
 
 
+def ensure_generated():
+    """version.h and webassets are gitignored; create stubs so a bare CI/local build links."""
+    version = ROOT / "src" / "version.h"
+    if not version.exists():
+        version.write_text(
+            "#pragma once\n"
+            "#ifndef GIT_VERSION_H\n"
+            "#define GIT_VERSION_H\n"
+            '#define BUILD_GIT_VERSION "p4-sim"\n'
+            '#define BUILD_TIMESTAMP "0"\n'
+            "#endif\n"
+        )
+        print(f"Wrote stub {version}")
+    manifest = ROOT / "src" / "display" / "webassets" / "web_ui_manifest.h"
+    if not manifest.exists():
+        subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "embed_webui.py"), "--out", str(manifest.parent), "--stub"],
+            cwd=ROOT,
+            check=True,
+        )
+
+
 def build():
     if not shutil.which("emcc"):
         sys.exit("emcc not found; run: source ~/emsdk/emsdk_env.sh")
+    ensure_generated()
     db = compile_database()
     template = next(e for e in db if e["file"].endswith(".c"))
     jobs, seen = [], set()

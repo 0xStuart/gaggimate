@@ -42,9 +42,7 @@ jobs:
           version: 3.1.74
 
       - name: Build browser sim
-        run: |
-          source emsdk_env.sh
-          python3 sim-web/build.py
+        run: python3 sim-web/build.py
 
       - name: Publish to gh-pages/p4-sim
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e
@@ -53,3 +51,4 @@ jobs:
           publish_dir: .pio/build/display-web/site
           destination_dir: p4-sim
           publish_branch: gh-pages
+          force_orphan: false

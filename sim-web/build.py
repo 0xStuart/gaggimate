@@ -130,6 +130,8 @@ def build():
         sys.exit("emcc not found; run: source ~/emsdk/emsdk_env.sh")
     ensure_generated()
     db = compile_database()
+    # compiledb / native env can race with gitignored stubs; re-ensure before emcc.
+    ensure_generated()
     template = next(e for e in db if e["file"].endswith(".c"))
     jobs, seen = [], set()
     for entry in db:

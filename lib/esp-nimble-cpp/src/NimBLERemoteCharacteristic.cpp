@@ -242,14 +242,50 @@ bool NimBLERemoteCharacteristic::setNotify(uint16_t val, notify_callback notifyC
     NIMBLE_LOGD(LOG_TAG, ">> setNotify()");
 
     m_notifyCallback             = notifyCallback;
+    // Fresh discovery each attempt — concurrent ESP-Hosted connections often
+    // leave a failed/empty descriptor cache from an earlier EALREADY.
+    deleteDescriptors();
     NimBLERemoteDescriptor* desc = getDescriptor(NimBLEUUID((uint16_t)0x2902));
-    if (desc == nullptr) {
-        NIMBLE_LOGW(LOG_TAG, "<< setNotify(): Callback set, CCCD not found");
-        return true;
+    if (desc != nullptr) {
+        const bool ok = desc->writeValue(reinterpret_cast<uint8_t*>(&val), 2, response);
+        if (!ok) {
+            NIMBLE_LOGW(LOG_TAG, "<< setNotify(): CCCD write failed (chr=0x%04X)", getHandle());
+        }
+        return ok;
     }
 
-    NIMBLE_LOGD(LOG_TAG, "<< setNotify()");
-    return desc->writeValue(reinterpret_cast<uint8_t*>(&val), 2, response);
+    // Descriptor discovery failed (common on ESP-Hosted). Many espresso scales
+    // still expose CCCD at value_handle+1 — write it directly so notifications
+    // can be enabled even when disc_all_dscs returns nothing.
+    const uint16_t cccdHandle = getHandle() + 1;
+    const uint16_t connHandle = getClient()->getConnHandle();
+    int rc;
+    if (response) {
+        NimBLETaskData taskData(const_cast<NimBLERemoteCharacteristic*>(this));
+        rc = ble_gattc_write_flat(connHandle, cccdHandle, &val, sizeof(val),
+                                  [](uint16_t, const ble_gatt_error* error, struct ble_gatt_attr*, void* arg) -> int {
+                                      auto* td = static_cast<NimBLETaskData*>(arg);
+                                      NimBLEUtils::taskRelease(*td, error->status);
+                                      return 0;
+                                  },
+                                  &taskData);
+        if (rc == 0) {
+            NimBLEUtils::taskWait(taskData, BLE_NPL_TIME_FOREVER);
+            rc = taskData.m_flags;
+        }
+    } else {
+        rc = ble_gattc_write_no_rsp_flat(connHandle, cccdHandle, &val, sizeof(val));
+    }
+    if (rc != 0) {
+        NIMBLE_LOGW(LOG_TAG,
+                    "<< setNotify(): CCCD fallback write handle=0x%04X failed rc=%d %s",
+                    cccdHandle,
+                    rc,
+                    NimBLEUtils::returnCodeToString(rc));
+        return false;
+    }
+    NIMBLE_LOGW(LOG_TAG, "<< setNotify(): CCCD fallback write handle=0x%04X ok", cccdHandle);
+    return true;
 } // setNotify
 
 /**
@@ -261,7 +297,18 @@ bool NimBLERemoteCharacteristic::setNotify(uint16_t val, notify_callback notifyC
  * @return false if writing to the descriptor failed.
  */
 bool NimBLERemoteCharacteristic::subscribe(bool notifications, notify_callback notifyCallback, bool response) const {
-    return setNotify(notifications ? 0x01 : 0x02, notifyCallback, response);
+    const uint16_t val = notifications ? 0x01 : 0x02;
+    // Descriptor discovery / CCCD write can collide with a concurrent connection
+    // (controller + scale on ESP-Hosted). Retry with backoff; prefer a no-response
+    // CCCD write on later attempts (write-with-response often stalls on Hosted).
+    for (int attempt = 0; attempt < 6; ++attempt) {
+        const bool useResponse = response && attempt < 2;
+        if (setNotify(val, notifyCallback, useResponse)) {
+            return true;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100 * (attempt + 1)));
+    }
+    return false;
 } // subscribe
 
 /**

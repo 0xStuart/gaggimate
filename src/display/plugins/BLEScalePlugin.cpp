@@ -90,6 +90,13 @@ void BLEScalePlugin::setup(Controller *controller, PluginManager *manager) {
         }
     });
     manager->on("controller:bluetooth:disconnect", [this](Event const &) {
+#ifdef WAVESHARE_ESP32_P4_7B
+        // establishConnection() briefly drops the controller so the scale CCCD
+        // subscribe can succeed on ESP-Hosted; do not tear the scale down then.
+        if (pausingControllerForScale) {
+            return;
+        }
+#endif
         ESP_LOGW("BLEScalePlugin", "Controller disconnected, stopping BLE scan");
         active = false;
     });
@@ -381,7 +388,24 @@ void BLEScalePlugin::establishConnection() {
                 }
             });
 
+#ifdef WAVESHARE_ESP32_P4_7B
+            // ESP-Hosted: CCCD subscribe for the scale fails while the controller
+            // link is busy (descriptor discovery / write returns EALREADY). Drop the
+            // controller briefly; BleClientTransport rescans and reconnects after.
+            pausingControllerForScale = true;
+            if (controller->getClientController()->isConnected()) {
+                ESP_LOGW("BLEScalePlugin", "Pausing controller BLE for scale subscribe");
+                controller->getClientController()->disconnect();
+                delay(300);
+            }
+            active = true;
+            shutdownPending = false;
+#endif
+
             bool connectResult = scale->connect();
+#ifdef WAVESHARE_ESP32_P4_7B
+            pausingControllerForScale = false;
+#endif
             if (!connectResult) {
                 ESP_LOGW("BLEScalePlugin", "Failed to connect to scale, retrying scan");
                 emitConnectError(uuid, "connect_failed");

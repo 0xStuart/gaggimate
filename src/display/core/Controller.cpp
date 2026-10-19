@@ -1506,8 +1506,11 @@ void Controller::onVolumetricMeasurement(double measurement, VolumetricMeasureme
     // locked. This keeps shot history, the UI, and process volume in agreement
     // if another scale remains healthy after the selected scale stops reporting.
     if (source == getEffectiveScaleSource()) {
+        // Side panels (and anything else) read this via getCurrentCoffeeVolume();
+        // DefaultUI listens to the event below — keep both in sync.
+        currentCoffeeVolume = normalizeWeightForDisplay(effectiveMeasurement);
         pluginManager->trigger(F("controller:volumetric-measurement:active:change"), "value",
-                               normalizeWeightForDisplay(effectiveMeasurement));
+                               currentCoffeeVolume);
     }
 
     // This callback fires from the NimBLE task on core 0; deactivate()/clear() on

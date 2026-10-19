@@ -296,6 +296,26 @@ bool NimBLEClient::connect(const NimBLEAddress& address, bool deleteAttributes, 
     }
 
     m_pClientCallbacks->onConnect(this);
+
+    // ESP-Hosted (controller + scale): the CONNECT-time MTU exchange often fails
+    // with BLE_HS_EALREADY. Retry once the link has settled so notify payloads
+    // larger than the default ATT MTU (23) are not dropped on the floor.
+    // (Parameter `exchangeMTU` shadows the method — call via this->.)
+    if (isConnected() && getMTU() <= 23) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        if (isConnected() && getMTU() <= 23) {
+            NimBLETaskData mtuTask(this);
+            m_pTaskData = &mtuTask;
+            if (this->exchangeMTU()) {
+                if (!NimBLEUtils::taskWait(mtuTask, 1000)) {
+                    NIMBLE_LOGW(LOG_TAG, "Deferred MTU exchange timed out; MTU=%u", getMTU());
+                }
+            }
+            m_pTaskData = nullptr;
+            NIMBLE_LOGW(LOG_TAG, "Post-connect MTU=%u", getMTU());
+        }
+    }
+
     NIMBLE_LOGD(LOG_TAG, "<< connect()");
     // Check if still connected before returning
     return isConnected();

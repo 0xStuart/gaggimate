@@ -911,7 +911,8 @@ int NimBLEClient::exchangeMTUCb(uint16_t conn_handle, const ble_gatt_error* erro
 bool NimBLEClient::exchangeMTU() {
     int rc = ble_gattc_exchange_mtu(m_connHandle, NimBLEClient::exchangeMTUCb, this);
     if (rc != 0) {
-        NIMBLE_LOGE(LOG_TAG, "MTU exchange error; rc=%d %s", rc, NimBLEUtils::returnCodeToString(rc));
+        // Warning only: callers may continue with the default ATT MTU (see CONNECT handler).
+        NIMBLE_LOGW(LOG_TAG, "MTU exchange error; rc=%d %s", rc, NimBLEUtils::returnCodeToString(rc));
         m_lastErr = rc;
         return false;
     }
@@ -1015,7 +1016,15 @@ int NimBLEClient::handleGapEvent(struct ble_gap_event* event, void* arg) {
 
                 if (pClient->m_config.exchangeMTU) {
                     if (!pClient->exchangeMTU()) {
-                        rc = pClient->m_lastErr; // sets the error in the task data
+                        // ESP-Hosted (and other multi-connection setups) can return
+                        // BLE_HS_EALREADY when a second client starts MTU exchange while
+                        // another link is busy. Keep the connection; default ATT MTU is fine
+                        // for scales and other small-payload peripherals.
+                        NIMBLE_LOGW(LOG_TAG,
+                                    "MTU exchange not started (rc=%d %s); continuing with default MTU",
+                                    pClient->m_lastErr,
+                                    NimBLEUtils::returnCodeToString(pClient->m_lastErr));
+                        rc = 0;
                         break;
                     }
 

@@ -570,6 +570,12 @@ void Controller::setupWifi() {
             ESP_LOGI(LOG_TAG, "Connected to %s with IP address %s", settings.getWifiSsid().c_str(),
                      WiFi.localIP().toString().c_str());
 #ifdef WAVESHARE_ESP32_P4_7B
+            // SoftAP was only a bootstrap aid: leave it up and the C6 starves BLE
+            // (scales never connect). Drop to STA-only once home Wi‑Fi is up.
+            WiFi.softAPdisconnect(true);
+            WiFi.mode(WIFI_STA);
+            WiFi.setTxPower(WIFI_POWER_11dBm);
+            ESP_LOGI(LOG_TAG, "STA: softAP stopped for BLE coexistence");
             // No STA_GOT_IP event handler on P4 — notify plugins here.
             wifiConnectedPending = true;
 #endif

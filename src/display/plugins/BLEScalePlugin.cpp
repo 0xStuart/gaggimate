@@ -222,6 +222,10 @@ void BLEScalePlugin::connect(const std::string &uuid) {
         return;
     }
 
+    // Web UI / API connect from standby would otherwise be torn down immediately
+    // (!active stops the scanner and disconnects in loop()).
+    active = true;
+    shutdownPending = false;
     doConnect = true;
     this->uuid = uuid;
     if (controller->getSettings().getSavedScale() != uuid.c_str()) {
@@ -231,6 +235,9 @@ void BLEScalePlugin::connect(const std::string &uuid) {
 }
 
 void BLEScalePlugin::scan() {
+    // Allow an explicit scan (web Settings) even while the machine is in standby.
+    active = true;
+    shutdownPending = false;
     scanRequested = true;
     if (scale != nullptr && scale->isConnected()) {
         return;

@@ -4,7 +4,9 @@
 #include "GaugesSidePanel.h"
 #include "GraphSidePanel.h"
 #include "LastShotSidePanel.h"
+#include "MachineStatsSidePanel.h"
 #include <Preferences.h>
+#include <cstring>
 #include <display/core/constants.h>
 #include <display/main.h>
 #include <display/ui/default/eez/screens.h>
@@ -40,6 +42,7 @@ void SidePanelHost::add(SidePanel *panel, uint8_t shown, uint8_t defaults) {
 void SidePanelHost::begin(lv_disp_t *disp) {
     if (panels.empty()) {
         add(new ClockSidePanel(), modeBit(SidePanelMode::Standby), modeBit(SidePanelMode::Standby));
+        add(new MachineStatsSidePanel(), modeBit(SidePanelMode::Standby), 0);
         add(new GaugesSidePanel(), ALL_ACTIVE_MODES,
             modeBit(SidePanelMode::BrewReady) | modeBit(SidePanelMode::Steam) | modeBit(SidePanelMode::Water) |
                 modeBit(SidePanelMode::Grind));
@@ -146,6 +149,17 @@ bool SidePanelHost::isShown(int index) const {
 }
 
 void SidePanelHost::showDefault() {
+    // Unconfigured / AP setup: surface Machine stats (versions, IP, join QR) instead of the clock.
+    if (mode == SidePanelMode::Standby &&
+        (controller.isAccessPoint() || controller.getSettings().getWifiSsid().isEmpty())) {
+        for (size_t i = 0; i < panels.size(); i++) {
+            if (strcmp(panels[i].panel->id(), "stats") == 0 && isShown(static_cast<int>(i))) {
+                show(static_cast<int>(i));
+                return;
+            }
+        }
+    }
+
     int fallback = -1;
     for (size_t i = 0; i < panels.size(); i++) {
         if (panels[i].defaults & modeBit(mode)) {

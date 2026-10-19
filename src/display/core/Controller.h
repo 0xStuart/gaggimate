@@ -155,6 +155,7 @@ class Controller {
     const WarningManager &getWarnings() const { return warnings; }
 
     SystemInfo getSystemInfo() const { return systemInfo; }
+    bool isAccessPoint() const { return isApConnection; }
 
     GaggiMateClient *getClientController() { return &comms; }
 

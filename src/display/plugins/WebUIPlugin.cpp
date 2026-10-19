@@ -317,7 +317,18 @@ static bool parseBoolArg(const String &value) {
 }
 
 void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
+#ifdef WAVESHARE_ESP32_P4_7B
+    // Captive-setup on the softAP: a plain Save leaves STA credentials in NVS but never
+    // leaves AP mode. Auto-restart when home Wi-Fi credentials change so Save connects.
+    const String prevWifiSsid = controller->getSettings().getWifiSsid();
+    const String prevWifiPassword = controller->getSettings().getWifiPassword();
+    const bool wifiPasswordPosted =
+        request->method() == HTTP_POST && request->hasArg("wifiPassword") &&
+        request->arg("wifiPassword") != "---unchanged---";
+#endif
     if (request->method() == HTTP_POST) {
+        ESP_LOGI("WebUIPlugin", "settings POST: args=%u wifiSsid=%d wifiPassword=%d", request->args(),
+                 request->hasArg("wifiSsid") ? 1 : 0, request->hasArg("wifiPassword") ? 1 : 0);
         controller->getSettings().batchUpdate([request](Settings *settings) {
             if (request->hasArg("startupMode"))
                 settings->setStartupMode(request->arg("startupMode") == "brew" ? MODE_BREW : MODE_STANDBY);
@@ -365,12 +376,16 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
                 settings->setPumpModelCoeffs(request->arg("pumpModelCoeffs"));
             if (request->hasArg("pumpSlipCoeffs"))
                 settings->setPumpSlipCoeffs(request->arg("pumpSlipCoeffs"));
-            if (request->hasArg("wifiSsid"))
+            if (request->hasArg("wifiSsid")) {
                 settings->setWifiSsid(request->arg("wifiSsid"));
+                ESP_LOGI("WebUIPlugin", "Wi‑Fi SSID set to '%s'", request->arg("wifiSsid").c_str());
+            }
             if (request->hasArg("mdnsName"))
                 settings->setMdnsName(request->arg("mdnsName"));
-            if (request->hasArg("wifiPassword") && request->arg("wifiPassword") != "---unchanged---")
+            if (request->hasArg("wifiPassword") && request->arg("wifiPassword") != "---unchanged---") {
                 settings->setWifiPassword(request->arg("wifiPassword"));
+                ESP_LOGI("WebUIPlugin", "Wi‑Fi password updated (%u chars)", (unsigned)request->arg("wifiPassword").length());
+            }
             if (request->hasArg("apPassword") && request->arg("apPassword").length() >= WIFI_AP_PASSWORD_MIN_LENGTH)
                 settings->setWifiApPassword(request->arg("apPassword"));
             if (request->hasArg("homekit"))
@@ -644,8 +659,22 @@ void WebUIPlugin::handleSettings(AsyncWebServerRequest *request) const {
     serializeJson(doc, *response);
     request->send(response);
 
-    if (request->method() == HTTP_POST && request->hasArg("restart"))
+    bool restart = request->method() == HTTP_POST && request->hasArg("restart");
+#ifdef WAVESHARE_ESP32_P4_7B
+    if (!restart && request->method() == HTTP_POST && apMode) {
+        const Settings &settings = controller->getSettings();
+        const bool ssidChanged = request->hasArg("wifiSsid") && settings.getWifiSsid() != prevWifiSsid;
+        const bool passwordChanged = wifiPasswordPosted && settings.getWifiPassword() != prevWifiPassword;
+        if (!settings.getWifiSsid().isEmpty() && (ssidChanged || passwordChanged)) {
+            restart = true;
+        }
+    }
+#endif
+    if (restart) {
+        // Let the HTTP response flush and NVS commit finish before resetting.
+        delay(250);
         ESP.restart();
+    }
 }
 
 void WebUIPlugin::handleBLEScaleList(AsyncWebServerRequest *request) {

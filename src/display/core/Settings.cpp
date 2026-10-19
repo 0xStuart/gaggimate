@@ -4,6 +4,10 @@
 #include <cmath>
 #include <display/util/ColorConversion.h>
 #include <utility>
+#ifndef GAGGIMATE_SIM
+#include <esp_log.h>
+#include <nvs_flash.h>
+#endif
 
 std::vector<AutoWakeupSchedule>
 PreferencesCodec<std::vector<AutoWakeupSchedule>>::read(Preferences &prefs, const char *key,
@@ -60,23 +64,49 @@ void PreferencesCodec<std::vector<AutoWakeupSchedule>>::write(Preferences &prefs
 }
 
 Settings::Settings() {
-    preferences.begin(PREFERENCES_KEY, true);
-    for (auto *property : registry) {
-        property->load(preferences);
+#ifndef GAGGIMATE_SIM
+    // Controller/Settings are constructed as globals before Arduino's initArduino()
+    // runs nvs_flash_init(). Without this, Preferences::begin fails with
+    // NOT_INITIALIZED, every boot loads defaults, and Wi‑Fi/AP settings look "unsaved".
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
     }
+    if (err != ESP_OK) {
+        ESP_LOGE("Settings", "nvs_flash_init failed: %s", esp_err_to_name(err));
+    }
+#endif
+    // Read-only open fails with NOT_FOUND when the namespace does not exist yet — create it.
+    bool opened = preferences.begin(PREFERENCES_KEY, true);
+    if (!opened) {
+        if (preferences.begin(PREFERENCES_KEY, false)) {
+            preferences.end();
+            opened = preferences.begin(PREFERENCES_KEY, true);
+        }
+    }
+    if (!opened) {
+#ifndef GAGGIMATE_SIM
+        ESP_LOGE("Settings", "Preferences begin failed — Wi‑Fi settings will not persist");
+#endif
+    } else {
+        for (auto *property : registry) {
+            property->load(preferences);
+        }
 
-    // Legacy migrations: derive defaults for keys that were never persisted
-    if (!preferences.isKey("sg_m")) {
-        smartGrindMode.initDefault(smartGrindToggle.get() ? 1 : 0);
+        // Legacy migrations: derive defaults for keys that were never persisted
+        if (!preferences.isKey("sg_m")) {
+            smartGrindMode.initDefault(smartGrindToggle.get() ? 1 : 0);
+        }
+        sunriseR = preferences.getInt("sr_r", 0);
+        sunriseG = preferences.getInt("sr_g", 250);
+        sunriseB = preferences.getInt("sr_b", 150);
+        sunriseW = preferences.getInt("sr_w", 255);
+        if (!preferences.isKey("sr_i")) {
+            sunriseIdle.initDefault(ColorConversion::toHex(sunriseR, sunriseG, sunriseB, sunriseW));
+        }
+        preferences.end();
     }
-    sunriseR = preferences.getInt("sr_r", 0);
-    sunriseG = preferences.getInt("sr_g", 250);
-    sunriseB = preferences.getInt("sr_b", 150);
-    sunriseW = preferences.getInt("sr_w", 255);
-    if (!preferences.isKey("sr_i")) {
-        sunriseIdle.initDefault(ColorConversion::toHex(sunriseR, sunriseG, sunriseB, sunriseW));
-    }
-    preferences.end();
 
     xTaskCreate(loopTask, "Settings::loop", configMINIMAL_STACK_SIZE * 6, this, 1, &taskHandle);
 }

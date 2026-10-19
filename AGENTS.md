@@ -18,7 +18,7 @@ Simulator: `pio run -e display-sim-waveshare-esp32-p4-7b -t run` (driver in `sim
 
 ## Full UI firmware (`display-p4`)
 
-`[env:display-p4]` builds the GaggiMate display UI with the 480×480 island on the left and side panels on the right. Flash with `scripts/flash_p4.sh` (`.venv-pio` + esptool ≥5.3).
+`[env:display-p4]` builds the GaggiMate display UI with the 480×480 island on the left and side panels on the right. Flash with `scripts/flash_p4.sh` (`.venv-pio` + esptool ≥5.3). Default flashes the **app only** so NVS (Wi‑Fi / AP password) survives. Do not write `firmware.factory.bin` at `0x0` for routine updates — it pads through NVS and wipes settings. Full wipe: `FULL_FLASH=1 ./scripts/flash_p4.sh`.
 
 **Glass check (2026-10-19, Stuart's 7B, rev v3.2 / eco7):** **GO** — factory image flashes; `WaveshareEsp32P47BDriver` / `P4DsiPanel` init 1024×600 RGB565; GT911 at `0x5D` (1024×600); ESP-Hosted Wi‑Fi AP + Web UI start. Optional real web bundle: run `scripts/build_webui.sh` before flash (otherwise an empty stub is embedded).
 

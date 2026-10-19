@@ -120,8 +120,11 @@ void Controller::setup() {
         pluginManager->registerPlugin(new MahlkonigPlugin());
     }
 #ifndef GAGGIMATE_SIM // WiFi watchdogs and BLE scales are device-only
+#ifndef WAVESHARE_ESP32_P4_7B
+    // ESP-Hosted STA is flaky with native esp_wifi reconnect/AP-info calls.
     pluginManager->registerPlugin(new NetworkWatchdogPlugin());
     pluginManager->registerPlugin(new WifiStaWatchdogPlugin());
+#endif
     pluginManager->registerPlugin(new ImprovPlugin());
 #endif
     pluginManager->registerPlugin(&ShotHistory);
@@ -466,12 +469,49 @@ void Controller::onIncompatibleController(const String &infoJson) {
 }
 
 void Controller::setupWifi() {
+    ESP_LOGI(LOG_TAG, "WiFi NVS: ssid='%s' pass_len=%u ap_pass_len=%u", settings.getWifiSsid().c_str(),
+             (unsigned)settings.getWifiPassword().length(), (unsigned)settings.getWifiApPassword().length());
+
     // Generate and persist a WPA2 AP password on first start
     if (settings.getWifiApPassword().isEmpty()) {
         settings.setWifiApPassword(generateShortID(DEFAULT_WIFI_AP_PASSWORD_LENGTH));
     }
 
+    const String apPassword = settings.getWifiApPassword();
+    const bool apSecured = apPassword.length() >= WIFI_AP_PASSWORD_MIN_LENGTH;
+    auto startSoftAp = [&]() {
+        WiFi.softAPConfig(WIFI_AP_IP, WIFI_AP_IP, WIFI_SUBNET_MASK);
+        WiFi.softAP(WIFI_AP_SSID, apSecured ? apPassword.c_str() : nullptr);
+#ifdef WAVESHARE_ESP32_P4_7B
+        // USB-only power + Hosted C6 browns out at 19.5 dBm; 11 dBm is a workable compromise.
+        WiFi.setTxPower(WIFI_POWER_11dBm);
+#else
+        WiFi.setTxPower(WIFI_POWER_19_5dBm);
+#endif
+        ESP_LOGI(LOG_TAG, "========================================");
+        ESP_LOGI(LOG_TAG, "  WiFi Access Point started");
+        ESP_LOGI(LOG_TAG, "  SSID:     %s", WIFI_AP_SSID);
+        if (apSecured) {
+            ESP_LOGI(LOG_TAG, "  Password: %s", apPassword.c_str());
+        } else {
+            ESP_LOGI(LOG_TAG, "  Password: <open network>");
+        }
+        ESP_LOGI(LOG_TAG, "  Web UI:   http://%s/", WIFI_AP_IP.toString().c_str());
+        ESP_LOGI(LOG_TAG, "========================================");
+    };
+
     if (settings.getWifiSsid() != "" && settings.getWifiPassword() != "") {
+#ifdef WAVESHARE_ESP32_P4_7B
+        // ESP-Hosted: keep softAP up (AP+STA) so http://4.4.4.1/ still works when
+        // LAN STA is flaky. Avoid WiFi.onEvent (Instruction access fault on C6 0.0.0).
+        ESP_LOGI(LOG_TAG, "STA: AP_STA mode");
+        WiFi.mode(WIFI_AP_STA);
+        startSoftAp();
+        ESP_LOGI(LOG_TAG, "STA: begin '%s'", settings.getWifiSsid().c_str());
+        WiFi.begin(settings.getWifiSsid().c_str(), settings.getWifiPassword().c_str());
+        WiFi.setTxPower(WIFI_POWER_11dBm);
+        WiFi.setHostname(settings.getMdnsName().c_str());
+#else
         WiFi.setHostname(settings.getMdnsName().c_str());
         WiFi.mode(WIFI_STA);
         WiFi.setAutoReconnect(true);
@@ -517,6 +557,7 @@ void Controller::setupWifi() {
 
         WiFi.begin(settings.getWifiSsid(), settings.getWifiPassword());
         WiFi.setTxPower(WIFI_POWER_19_5dBm);
+#endif
         for (int attempts = 0; attempts < WIFI_CONNECT_ATTEMPTS; attempts++) {
             if (WiFi.status() == WL_CONNECTED) {
                 break;
@@ -528,6 +569,10 @@ void Controller::setupWifi() {
         if (WiFi.status() == WL_CONNECTED) {
             ESP_LOGI(LOG_TAG, "Connected to %s with IP address %s", settings.getWifiSsid().c_str(),
                      WiFi.localIP().toString().c_str());
+#ifdef WAVESHARE_ESP32_P4_7B
+            // No STA_GOT_IP event handler on P4 — notify plugins here.
+            wifiConnectedPending = true;
+#endif
             configTzTime(resolve_timezone(settings.getTimezone()), NTP_SERVER);
             setenv("TZ", resolve_timezone(settings.getTimezone()), 1);
             tzset();
@@ -535,36 +580,28 @@ void Controller::setupWifi() {
             sntp_setservername(0, NTP_SERVER);
             sntp_init();
         } else {
+#ifndef WAVESHARE_ESP32_P4_7B
             WiFi.disconnect(true, true);
+#endif
             ESP_LOGI(LOG_TAG, "Timed out while connecting to WiFi");
             Serial.println("Timed out while connecting to WiFi");
         }
     }
     if (WiFi.status() != WL_CONNECTED) {
         isApConnection = true;
-        const String apPassword = settings.getWifiApPassword();
-        // WPA2 requires >= 8 chars; fall back to an open AP if somehow shorter.
-        const bool secured = apPassword.length() >= WIFI_AP_PASSWORD_MIN_LENGTH;
-        WiFi.mode(WIFI_AP);
-        WiFi.softAPConfig(WIFI_AP_IP, WIFI_AP_IP, WIFI_SUBNET_MASK);
-        WiFi.softAP(WIFI_AP_SSID, secured ? apPassword.c_str() : nullptr);
 #ifdef WAVESHARE_ESP32_P4_7B
-        // C6 over Hosted + MIPI panel on USB-only power browns out at 19.5 dBm (reset=POWERON loop).
-        WiFi.setTxPower(WIFI_POWER_8_5dBm);
-#else
-        WiFi.setTxPower(WIFI_POWER_19_5dBm);
-#endif
-        // Credentials block so headless users can read the AP login from serial.
-        ESP_LOGI(LOG_TAG, "========================================");
-        ESP_LOGI(LOG_TAG, "  WiFi Access Point started");
-        ESP_LOGI(LOG_TAG, "  SSID:     %s", WIFI_AP_SSID);
-        if (secured) {
-            ESP_LOGI(LOG_TAG, "  Password: %s", apPassword.c_str());
-        } else {
-            ESP_LOGI(LOG_TAG, "  Password: <open network>");
+        // SoftAP may already be up from the AP_STA attempt above.
+        if (WiFi.getMode() != WIFI_AP && WiFi.getMode() != WIFI_AP_STA) {
+            WiFi.mode(WIFI_AP);
+            startSoftAp();
+        } else if (WiFi.getMode() == WIFI_STA) {
+            WiFi.mode(WIFI_AP);
+            startSoftAp();
         }
-        ESP_LOGI(LOG_TAG, "  Web UI:   http://%s/", WIFI_AP_IP.toString().c_str());
-        ESP_LOGI(LOG_TAG, "========================================");
+#else
+        WiFi.mode(WIFI_AP);
+        startSoftAp();
+#endif
     }
 
     pluginManager->on("ota:update:start", [this](Event const &) { this->updating = true; });

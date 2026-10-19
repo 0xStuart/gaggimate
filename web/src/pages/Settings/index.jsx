@@ -401,9 +401,17 @@ export function Settings() {
       const formDataToSubmit = buildSubmitFormData(formData, autowakeupSchedules, restart);
 
       try {
+        // Prefer urlencoded over multipart FormData — ESPAsyncWebServer on some
+        // targets (ESP32-P4 / ESP-Hosted) has dropped multipart fields, so Wi‑Fi
+        // SSID/password never reached Settings / NVS.
+        const params = new URLSearchParams();
+        for (const [key, value] of formDataToSubmit.entries()) {
+          params.append(key, String(value));
+        }
         const response = await fetch(form.action, {
           method: 'post',
-          body: formDataToSubmit,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString(),
         });
         const data = await response.json();
 

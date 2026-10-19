@@ -2,7 +2,11 @@
 
 GaggiMate display port for the **Waveshare ESP32-P4 7B** (catalogue name: ESP32-P4-WIFI6-Touch-LCD-7B).
 
+Hardware: [ESP32-P4-WIFI6-Touch-LCD-7B](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-7b.htm)
+
 The official 480×480 UI stays an island on the left; side panels use the right half of the 1024×600 panel. LilyGo and other upstream targets are unchanged.
+
+![480×480 island with Last shot side panel on the Waveshare ESP32-P4 7B](docs/island-side-panels.png)
 
 ## Try the emulator in your browser
 

@@ -371,9 +371,7 @@ void DefaultUI::loop() {
         rerender = false;
         lastRender = now;
         applyTheme();
-        if (controller->isErrorState()) {
-            changeScreen(SCREEN_ID_STANDBY_SCREEN);
-        }
+        syncScreenToMode();
         updateState();
         // Fill the EEZ data models before handleScreenChange() creates/ticks a screen (undefined fields abort the flow).
         updateSystemStatus();
@@ -399,7 +397,7 @@ void DefaultUI::loop() {
         updateProfilePreview();
         effect_mgr.evaluate_all();
 
-        if (currentScreen == SCREEN_ID_STANDBY_SCREEN) {
+        if (controller->getMode() == MODE_STANDBY && currentScreen == SCREEN_ID_STANDBY_SCREEN) {
             if (standbyEnterTime > 0) {
                 const Settings &settings = controller->getSettings();
                 const unsigned long now = millis();
@@ -411,6 +409,10 @@ void DefaultUI::loop() {
     }
 
     ui_tick();
+    if (setpointsNeedApply) {
+        applyGaugeSetpointStyle(gaugeSetpointsInside);
+        setpointsNeedApply = false;
+    }
     lv_task_handler();
 }
 
@@ -536,6 +538,7 @@ void DefaultUI::onVolumetricDelete() {
 
 void DefaultUI::setupPanel() {
     ui_init();
+    islandDisp = lv_disp_get_default();
     gaugeSetpointsInside = controller->areGaugeSetpointsInside();
     applyGaugeSetpointStyle(gaugeSetpointsInside);
     setupState();
@@ -622,6 +625,33 @@ void DefaultUI::setupState() {
                           &grindAvailable);
 }
 
+void DefaultUI::syncScreenToMode() {
+    const int mode = controller->getMode();
+    if (mode == MODE_STANDBY) {
+        if (targetScreen != SCREEN_ID_STANDBY_SCREEN)
+            changeScreen(SCREEN_ID_STANDBY_SCREEN);
+        return;
+    }
+    if (targetScreen != SCREEN_ID_STANDBY_SCREEN && currentScreen != SCREEN_ID_STANDBY_SCREEN)
+        return;
+    switch (mode) {
+    case MODE_BREW:
+        changeScreen(SCREEN_ID_BREW_SCREEN);
+        break;
+    case MODE_GRIND:
+        changeScreen(SCREEN_ID_GRIND_SCREEN);
+        break;
+    case MODE_STEAM:
+        changeScreen(SCREEN_ID_STEAM_SCREEN);
+        break;
+    case MODE_WATER:
+        changeScreen(SCREEN_ID_WATER_SCREEN);
+        break;
+    default:
+        break;
+    }
+}
+
 void DefaultUI::handleScreenChange() {
     if (currentScreen != targetScreen) {
         if (currentScreen == SCREEN_ID_BREW_SCREEN)
@@ -632,10 +662,19 @@ void DefaultUI::handleScreenChange() {
             const ::Settings &settings = controller->getSettings();
             setBrightness(settings.getMainBrightness());
         }
+        // EEZ / lv_scr_load use the default display. On the P4 the side panel
+        // refresh can steal that; pin the island so a web wake actually leaves
+        // the 480 UI, not just the heater.
+        lv_disp_t *prevDisp = lv_disp_get_default();
+        if (islandDisp != nullptr)
+            lv_disp_set_default(islandDisp);
         eez_flow_set_screen(targetScreen, LV_SCR_LOAD_ANIM_NONE, 0, 0);
+        if (prevDisp != nullptr)
+            lv_disp_set_default(prevDisp);
         // Dial widgets are created lazily by EEZ, so apply the current choice after
-        // the new screen's pair of indicators exists.
+        // the new screen's pair of indicators exists (and again after ui_tick).
         applyGaugeSetpointStyle(gaugeSetpointsInside);
+        setpointsNeedApply = true;
         animateGaugeTicks(isShortTickScreen(currentScreen, tickChartMode), isShortTickScreen(targetScreen, tickChartMode));
         rerender = true;
     }
@@ -672,7 +711,17 @@ void DefaultUI::setGaugeTickLength(int32_t len) {
     }
 }
 
-void DefaultUI::applyGaugeSetpointStyle(bool inside) { applyGaugeSetpointVisibility(lv_scr_act(), inside); }
+lv_obj_t *DefaultUI::islandScreen() const {
+    if (islandDisp != nullptr)
+        return lv_disp_get_scr_act(islandDisp);
+    return lv_scr_act();
+}
+
+void DefaultUI::applyGaugeSetpointStyle(bool inside) {
+    lv_obj_t *scr = islandScreen();
+    if (scr != nullptr)
+        applyGaugeSetpointVisibility(scr, inside);
+}
 
 void DefaultUI::gaugeTickAnimCb(void *var, int32_t v) { static_cast<DefaultUI *>(var)->setGaugeTickLength(v); }
 
@@ -682,7 +731,7 @@ void DefaultUI::animateGaugeTicks(bool fromShort, bool toShort) {
 
     lv_anim_del(this, gaugeTickAnimCb); // cancel any in-flight tick animation
     gaugeCount = 0;
-    collectMeters(lv_scr_act());
+    collectMeters(islandScreen());
     if (gaugeCount == 0) {
         return;
     }

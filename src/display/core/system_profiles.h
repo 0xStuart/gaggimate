@@ -35,6 +35,34 @@ inline Profile makeBackflushProfile(const char *id) {
 }
 
 // Wait phases stay below the 300 s brew safety limit; three of them make up the 10 minute soak.
+// Stock 9-bar espresso. Seeded on the Waveshare ESP32-P4 7B when missing so
+// app-only flashes (which skip LittleFS) still have a pressure-target profile
+// for the island setpoint arrow.
+inline Profile makeNineBarProfile(const char *id) {
+    Profile profile{};
+    profile.id = id;
+    profile.label = "9 Bar Espresso";
+    profile.type = "standard";
+    profile.temperature = 93;
+    profile.favorite = true;
+
+    Phase brew{};
+    brew.name = "Pump";
+    brew.phase = PhaseType::PHASE_TYPE_BREW;
+    brew.valve = 1;
+    brew.duration = 28.0f;
+    brew.pumpIsSimple = false;
+    brew.pumpAdvanced.target = PumpTarget::PUMP_TARGET_PRESSURE;
+    brew.pumpAdvanced.pressure = 9.0f;
+    brew.pumpAdvanced.flow = 0.0f;
+    brew.transition.type = TransitionType::INSTANT;
+    brew.transition.duration = 0.0f;
+    brew.transition.adaptive = true;
+    brew.targets.push_back(Target{TargetType::TARGET_TYPE_VOLUMETRIC, TargetOperator::GTE, 36.0f});
+    profile.phases.push_back(brew);
+    return profile;
+}
+
 inline Profile makeDescalingProfile(const char *id) {
     Profile profile{};
     profile.id = id;

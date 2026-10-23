@@ -10,6 +10,7 @@
 // System profiles are seeded when missing, stay editable, live under utility and cannot be deleted.
 constexpr const char *BACKFLUSH_PROFILE_ID = "flush";
 constexpr const char *DESCALING_PROFILE_ID = "descale";
+constexpr const char *NINE_BAR_PROFILE_ID = "9bar";
 
 constexpr size_t MAX_FAVORITED_PROFILES = 10; // the web UI enforces the same limit
 

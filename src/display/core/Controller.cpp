@@ -209,7 +209,9 @@ void Controller::setupPanel() {
     driver->init();
 #elif defined(WAVESHARE_ESP32_P4_7B)
     driver = waveshare_esp32_p4_7b::WaveshareEsp32P47BDriver::getInstance();
-    gaugeSetpointsInside = false;
+    // Software circle mask clips the 8px outside needle (pivot −233 on r=240).
+    // Use the inside arrow, same as AMOLED.
+    gaugeSetpointsInside = true;
     driver->init();
 #else
     // The panel can't change after flashing, so cache the detection result in NVS

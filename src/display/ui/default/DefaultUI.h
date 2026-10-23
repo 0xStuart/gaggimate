@@ -86,17 +86,21 @@ class DefaultUI {
     void setupState();
 
     void handleScreenChange();
+    void syncScreenToMode(); // island must follow controller mode (web wake, dual-display)
 
     // Animate the dial meters' tick length (short on profile/menu/info and chart-mode status, long elsewhere).
     void animateGaugeTicks(bool fromShort, bool toShort);
     void collectMeters(lv_obj_t *obj);
     void setGaugeTickLength(int32_t len);
     void applyGaugeSetpointStyle(bool inside);
+    lv_obj_t *islandScreen() const; // island display's active screen, not lv_scr_act() (side panel)
     static void gaugeTickAnimCb(void *var, int32_t v);
+    lv_disp_t *islandDisp = nullptr;
     lv_obj_t *gaugeMeters[4] = {nullptr};
     bool tickChartMode = false; // chart mode the ring ticks currently reflect
     uint8_t gaugeCount = 0;
     bool gaugeSetpointsInside = false;
+    bool setpointsNeedApply = false; // EEZ creates dials on ui_tick after a screen change
     void positionMenuIcon(lv_obj_t *obj, int angle, int radius);
 
     void updateState();

@@ -32,6 +32,18 @@ void ProfileManager::setup() {
         loadSelectedProfile(selectedProfile);
     }
     ensureSystemProfiles();
+#ifdef WAVESHARE_ESP32_P4_7B
+    // App-only P4 flashes never write LittleFS, so data/p/9bar.json is missing
+    // and migrate() leaves only a simple 100% Default — no pressure target, so
+    // the island setpoint arrow never moves. Seed the stock 9-bar profile once.
+    if (!profileExists(NINE_BAR_PROFILE_ID)) {
+        Profile nineBar = makeNineBarProfile(NINE_BAR_PROFILE_ID);
+        if (saveProfile(nineBar)) {
+            addFavoritedProfile(nineBar.id);
+            ESP_LOGI("ProfileManager", "Seeded %s", NINE_BAR_PROFILE_ID);
+        }
+    }
+#endif
     _settings.setFavoritedProfiles(getFavoritedProfiles(true));
 
     String startupProfile = _settings.getStartupProfile();

@@ -145,6 +145,8 @@ void Controller::setup() {
 
     pluginManager->on("profiles:profile:select", [this](Event const &event) { this->handleProfileUpdate(); });
 
+    pluginManager->on("scale:disconnect", [this](Event const &) { lastBluetoothMeasurement.store(0); });
+
     buttons.setCallback([this](uint8_t index, ButtonHandler::Event event) { onButtonEvent(index, event); });
 
 #ifndef GAGGIMATE_HEADLESS

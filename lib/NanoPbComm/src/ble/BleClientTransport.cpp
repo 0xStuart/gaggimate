@@ -305,9 +305,9 @@ void BleClientTransport::onResult(NimBLEAdvertisedDevice *advertisedDevice) {
         }
     }
     ESP_LOGI(LOG_TAG, "Found controller, ready to connect");
-    _scanner->stop();
-    // Value-copy the address now -- the device object is freed when this callback returns (see header note).
+    // Value-copy the address now -- with maxResults(0), NimBLEScan::stop() frees the advertised device.
     _serverAddress = advertisedDevice->getAddress();
+    _scanner->stop();
     _haveServerAddress = true;
     _readyForConnection = true;
 }

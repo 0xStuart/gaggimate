@@ -74,6 +74,7 @@ class BLEScalePlugin : public Plugin {
     void establishConnection();
     void emitScanComplete();
     void emitConnectError(const std::string &address, const char *reason);
+    void releaseRetiredScale();
 
     bool active = false;
     bool shutdownPending = false; // set on entering standby, consumed by loop() before disconnecting
@@ -105,6 +106,12 @@ class BLEScalePlugin : public Plugin {
     RemoteScalesPluginRegistry *pluginRegistry = nullptr;
     RemoteScalesScanner *scanner = nullptr;
     std::unique_ptr<RemoteScales> scale = nullptr;
+    // NimBLE deleteClient() only queues GAP disconnect while the link is up;
+    // notifications still invoke the driver's `this`. Keep the object until that
+    // completes or standby crashes with a use-after-free (ESP-Hosted, ~10 Hz Bookoo).
+    std::unique_ptr<RemoteScales> retiringScale = nullptr;
+    unsigned long retiringSince = 0;
+    static constexpr unsigned long SCALE_RETIRE_MS = 500;
 };
 
 extern BLEScalePlugin BLEScales;

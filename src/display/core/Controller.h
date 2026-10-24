@@ -176,6 +176,7 @@ class Controller {
 
     // Functional methods
     void updateControl();
+    void clearLiveReadings(); // zero last telemetry so a dead link cannot keep showing a hot boiler
     // Switch the BLE connection interval based on whether a process is running.
     // force re-applies even if the desired state is unchanged (use on connect).
     void applyConnectionPriority(bool force = false);
@@ -269,6 +270,8 @@ class Controller {
 
     unsigned long grindActiveUntil = 0;
     unsigned long lastPing = 0;
+    unsigned long lastSensorMillis = 0; // 0 = no sensor frame this link
+    static const unsigned long TELEMETRY_STALE_MS = 5000;
     unsigned long lastProgress = 0;
     unsigned long lastAction = 0;
     bool loaded = false;

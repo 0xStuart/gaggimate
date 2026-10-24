@@ -296,11 +296,13 @@ void Controller::setupBluetooth() {
         controlStateSent = false;
         settleResendAt = 0;
         if (connected) {
+            lastSensorMillis = millis();
             applyConnectionPriority(true);
             requestStateResend();
         } else if (initialized) {
             pluginManager->trigger("controller:bluetooth:disconnect");
             waitingForController = true;
+            clearLiveReadings();
             setMode(MODE_STANDBY);
         }
     });
@@ -323,6 +325,7 @@ void Controller::setupBluetooth() {
     pluginManager->on("history:shot:recorded", [this](Event const &) { comms.tare(); });
     comms.onSensorData([this](float temp, float temp2, float pressure, float puckFlow, float pumpFlow, float puckResistance,
                               float pumpPower, float heaterPower, float waterPumped) {
+        lastSensorMillis = millis();
         onTempRead(temp);
         onPressureRead(pressure);
         this->currentSteamTemp = temp2;
@@ -683,6 +686,19 @@ void Controller::loop() {
         (now - connectStartTime) > CONTROLLER_WAITING_TIMEOUT_MS) {
         waitingForController = true;
         pluginManager->trigger("controller:bluetooth:waiting");
+    }
+
+    // ESP-Hosted can leave isConnected() true after a scale-pause disconnect, so
+    // the brew UI keeps the last temperature and flashes the heater while the
+    // machine is actually cold. No sensor frames for a few seconds means the link is dead.
+    if (initialized && comms.isConnected() && lastSensorMillis != 0 && now - lastSensorMillis > TELEMETRY_STALE_MS) {
+        ESP_LOGW(LOG_TAG, "Controller telemetry stalled for %lu ms, dropping link", now - lastSensorMillis);
+        comms.disconnect();
+        pluginManager->trigger("controller:bluetooth:disconnect");
+        waitingForController = true;
+        connectStartTime = now;
+        clearLiveReadings();
+        setMode(MODE_STANDBY);
     }
 
     if (comms.isReadyForConnection() && comms.connectToServer()) {
@@ -1072,6 +1088,22 @@ void Controller::lowerGrindTarget() {
         }
         setTargetGrindDuration(newDuration);
     }
+}
+
+void Controller::clearLiveReadings() {
+    currentTemp = 0.0f;
+    currentSteamTemp = 0.0f;
+    pressure = 0.0f;
+    targetPressure = 0.0f;
+    currentPuckFlow = 0.0f;
+    currentPumpFlow = 0.0f;
+    currentPumpPower = 0.0f;
+    currentHeaterPower = 0.0f;
+    currentPuckResistance = 0.0f;
+    currentWaterPumped = 0.0f;
+    lastSensorMillis = 0;
+    pluginManager->trigger("boiler:currentTemperature:change", "value", 0.0f);
+    pluginManager->trigger("boiler:pressure:change", "value", 0.0f);
 }
 
 void Controller::updateControl() {

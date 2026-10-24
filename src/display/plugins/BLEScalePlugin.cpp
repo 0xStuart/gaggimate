@@ -36,6 +36,8 @@ BLEScalePlugin::~BLEScalePlugin() noexcept {
 
         // Ensure proper cleanup
         disconnect();
+        delay(SCALE_RETIRE_MS);
+        releaseRetiredScale();
 
         if (scanner != nullptr) {
             // Stop scanning first
@@ -102,7 +104,7 @@ void BLEScalePlugin::setup(Controller *controller, PluginManager *manager) {
     });
     manager->on("controller:brew:prestart", [this](Event const &) { onProcessStart(); });
     manager->on("controller:brew:end", [this](Event const &) {
-        if (scale != nullptr && scale->isConnected() && scale->hasTimerControl()) {
+        if (active && scale != nullptr && scale->isConnected() && scale->hasTimerControl()) {
             scale->stopTimer();
         }
     });
@@ -121,6 +123,7 @@ void BLEScalePlugin::setup(Controller *controller, PluginManager *manager) {
 }
 
 void BLEScalePlugin::loop() {
+    releaseRetiredScale();
     if (forgetRequested.exchange(false) && controller != nullptr) {
         ESP_LOGI("BLEScalePlugin", "Forgetting saved scale");
         controller->getSettings().setSavedScale("");
@@ -131,7 +134,7 @@ void BLEScalePlugin::loop() {
             scan();
         }
     }
-    if (doConnect && scale == nullptr) {
+    if (doConnect && scale == nullptr && retiringScale == nullptr) {
         establishConnection();
     }
     if (!active) {
@@ -147,7 +150,7 @@ void BLEScalePlugin::loop() {
             disconnect();
         }
         shutdownPending = false;
-        if (scanner->isScanRunning()) {
+        if (scanner != nullptr && scanner->isScanRunning()) {
             scanner->stopAsyncScan();
         }
     }
@@ -295,37 +298,41 @@ void BLEScalePlugin::emitConnectError(const std::string &address, const char *re
     pluginManager->trigger(event);
 }
 
+void BLEScalePlugin::releaseRetiredScale() {
+    if (retiringScale == nullptr)
+        return;
+    if (millis() - retiringSince < SCALE_RETIRE_MS)
+        return;
+    retiringScale.reset();
+}
+
 void BLEScalePlugin::disconnect() {
-    if (scale != nullptr) {
-        const String address = String(scale->getDeviceAddress().c_str());
-        const String name = String(scale->getDeviceName().c_str());
-        const bool notify = scale->isConnected() && pluginManager != nullptr;
+    if (scale == nullptr)
+        return;
 
-        // Add small delay to let any pending callbacks complete
-        delay(50);
+    const String address = String(scale->getDeviceAddress().c_str());
+    const String name = String(scale->getDeviceName().c_str());
+    const bool notify = scale->isConnected() && pluginManager != nullptr;
 
-        // Check if scale is still valid before calling disconnect
-        if (scale) {
-            scale->disconnect();
-        }
+    // Drop firmware callbacks first. NimBLE deleteClient() only starts GAP
+    // disconnect while the link is up; notify lambdas still capture the driver.
+    scale->setWeightUpdatedCallback(nullptr);
+    scale->setLogCallback(nullptr);
+    scale->disconnect();
 
-        scale = nullptr;
-        uuid = "";
-        doConnect = false;
-        // Reset metadata caches so we re-emit change events when a new scale
-        // connects (possibly a different model with different capabilities).
-        lastBatteryLevel = REMOTE_SCALES_BATTERY_UNKNOWN;
-        lastWeightUnit = ScaleWeightUnit::UNKNOWN;
+    retiringSince = millis();
+    retiringScale = std::move(scale);
+    uuid = "";
+    doConnect = false;
+    lastBatteryLevel = REMOTE_SCALES_BATTERY_UNKNOWN;
+    lastWeightUnit = ScaleWeightUnit::UNKNOWN;
 
-        // Standby used to tear the link down without this event, so the island
-        // icon and web Bluetooth tab kept looking connected.
-        if (notify) {
-            Event event;
-            event.id = "scale:disconnect";
-            event.setString("address", address);
-            event.setString("name", name);
-            pluginManager->trigger(event);
-        }
+    if (notify) {
+        Event event;
+        event.id = "scale:disconnect";
+        event.setString("address", address);
+        event.setString("name", name);
+        pluginManager->trigger(event);
     }
 }
 

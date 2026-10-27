@@ -26,17 +26,19 @@ int main(int argc, char **argv) {
         }
     }
 
-    controller.setup(); // builds the UI, installs the SDL driver, marks screen ready
-
-    // The sim has a real network (the WebUI is reachable), so present as Wi-Fi
-    // connected: seeding credentials sends setupWifi() down the STA path, and the
-    // WiFi shim's begin() reports WL_CONNECTED. This makes the standby screen show
-    // the clock and Wi-Fi icon (and avoids captive-portal AP mode). Seed only once.
+    // Present as a machine already on Wi-Fi. Seed before setup() so:
+    // - setupWifi() takes the STA path (the shim's begin() reports WL_CONNECTED)
+    // - the island shows the clock and Wi-Fi icon, not captive-portal AP mode
+    // - the right-half standby default is the clock, not Machine stats (that
+    //   panel is for unconfigured / AP setup). Seed only once; persisted
+    //   settings in sim_data/ / IndexedDB win on later runs.
     Settings &settings = controller.getSettings();
     if (settings.getWifiSsid().isEmpty())
         settings.setWifiSsid("GaggiMate-Sim");
     if (settings.getWifiPassword().isEmpty())
         settings.setWifiPassword("simulator");
+
+    controller.setup(); // builds the UI, installs the SDL driver, marks screen ready
 
     SdlDriver *drv = SdlDriver::getInstance();
     DefaultUI *ui = controller.getUI();

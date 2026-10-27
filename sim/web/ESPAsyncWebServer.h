@@ -29,6 +29,7 @@ enum WebRequestMethod {
 // WebSocket event + frame types.
 enum AwsEventType { WS_EVT_CONNECT, WS_EVT_DISCONNECT, WS_EVT_DATA, WS_EVT_PONG, WS_EVT_ERROR };
 enum { WS_CONTINUATION = 0x0, WS_TEXT = 0x1, WS_BINARY = 0x2 };
+enum AwsClientStatus { WS_DISCONNECTED, WS_CONNECTED, WS_DISCONNECTING };
 
 struct AwsFrameInfo {
     uint8_t opcode = WS_TEXT;
@@ -113,6 +114,7 @@ class AsyncWebSocketClient {
     AsyncWebSocketClient(uint32_t id, int fd) : _id(id), _fd(fd) {}
     uint32_t id() const { return _id; }
     int fd() const { return _fd; }
+    AwsClientStatus status() const { return WS_CONNECTED; }
     void setCloseClientOnQueueFull(bool) {}
     void text(AsyncWebSocketSharedBuffer buffer);
     void text(const String &message);
@@ -136,7 +138,17 @@ class AsyncWebSocket {
     void cleanupClients() {}
     size_t count() const { return _clients.size(); }
     void closeAll();
-    const std::vector<AsyncWebSocketClient *> &getClients() const { return _clients; }
+    // Snapshot of objects (not pointers) so firmware can use c.status() / c.id()
+    // the way ESPAsyncWebServer 3.x does.
+    std::vector<AsyncWebSocketClient> getClients() const {
+        std::vector<AsyncWebSocketClient> out;
+        out.reserve(_clients.size());
+        for (auto *c : _clients) {
+            if (c)
+                out.push_back(*c);
+        }
+        return out;
+    }
 
     // Used by the server implementation.
     AwsEventHandler _handler;

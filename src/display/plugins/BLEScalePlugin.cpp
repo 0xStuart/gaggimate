@@ -95,11 +95,12 @@ void BLEScalePlugin::setup(Controller *controller, PluginManager *manager) {
 #ifdef WAVESHARE_ESP32_P4_7B
         // establishConnection() briefly drops the controller so the scale CCCD
         // subscribe can succeed on ESP-Hosted; do not tear the scale down then.
-        if (pausingControllerForScale) {
+        if (this->controller != nullptr && this->controller->isScaleLinkPause()) {
+            ESP_LOGI("BLEScalePlugin", "Controller disconnect treated as scale-link pause (keeping scale)");
             return;
         }
 #endif
-        ESP_LOGW("BLEScalePlugin", "Controller disconnected, stopping BLE scan");
+        ESP_LOGW("BLEScalePlugin", "Controller disconnect treated as real loss, stopping BLE scan");
         active = false;
     });
     manager->on("controller:brew:prestart", [this](Event const &) { onProcessStart(); });
@@ -303,6 +304,7 @@ void BLEScalePlugin::releaseRetiredScale() {
         return;
     if (millis() - retiringSince < SCALE_RETIRE_MS)
         return;
+    ESP_LOGI("BLEScalePlugin", "Retired scale destroyed after %lu ms", millis() - retiringSince);
     retiringScale.reset();
 }
 
@@ -320,6 +322,7 @@ void BLEScalePlugin::disconnect() {
     scale->setLogCallback(nullptr);
     scale->disconnect();
 
+    ESP_LOGI("BLEScalePlugin", "Retiring scale %s (%s)", name.c_str(), address.c_str());
     retiringSince = millis();
     retiringScale = std::move(scale);
     uuid = "";
@@ -429,11 +432,11 @@ void BLEScalePlugin::establishConnection() {
 #ifdef WAVESHARE_ESP32_P4_7B
             // ESP-Hosted: CCCD subscribe for the scale fails while the controller
             // link is busy (descriptor discovery / write returns EALREADY). Drop the
-            // controller briefly; BleClientTransport rescans and reconnects after.
-            pausingControllerForScale = true;
+            // controller without rescanning — a scan during scale->connect() crashes.
+            controller->setScaleLinkPause(true);
             if (controller->getClientController()->isConnected()) {
                 ESP_LOGW("BLEScalePlugin", "Pausing controller BLE for scale subscribe");
-                controller->getClientController()->disconnect();
+                controller->getClientController()->disconnect(false);
                 delay(300);
             }
             active = true;
@@ -442,7 +445,13 @@ void BLEScalePlugin::establishConnection() {
 
             bool connectResult = scale->connect();
 #ifdef WAVESHARE_ESP32_P4_7B
-            pausingControllerForScale = false;
+            controller->setScaleLinkPause(false);
+            ESP_LOGI("BLEScalePlugin", "Scale-link pause ended, subscribe=%s controller=%s", connectResult ? "ok" : "fail",
+                     controller->getClientController()->isConnected() ? "up" : "down");
+            if (!controller->getClientController()->isConnected()) {
+                ESP_LOGI("BLEScalePlugin", "Resuming controller BLE scan");
+                controller->getClientController()->scan();
+            }
 #endif
             if (!connectResult) {
                 ESP_LOGW("BLEScalePlugin", "Failed to connect to scale, retrying scan");
@@ -453,6 +462,7 @@ void BLEScalePlugin::establishConnection() {
                 }
             } else {
                 const String name = scale->getDeviceName().c_str();
+                ESP_LOGI("BLEScalePlugin", "Scale subscribed: %s", name.c_str());
                 if (controller->getSettings().getSavedScaleName() != name) {
                     controller->getSettings().setSavedScaleName(name);
                 }

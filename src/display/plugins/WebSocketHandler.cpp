@@ -25,8 +25,17 @@ static std::unordered_map<uint32_t, PsramString> rxBuffers;
 // buffer — one exact-sized allocation, off the internal heap. [GM-139]
 static AsyncWebSocketSharedBuffer toWsBuffer(JsonDocument &doc) {
     const size_t len = measureJson(doc);
-    auto buffer = makePsramWsBuffer(len);
-    serializeJson(doc, buffer->data(), len);
+    if (len == 0)
+        return nullptr;
+    // serializeJson() writes a trailing NUL; allocate the extra byte then drop it
+    // so the websocket payload is exact JSON.
+    auto buffer = makePsramWsBuffer(len + 1);
+    if (!buffer || buffer->size() != len + 1)
+        return nullptr;
+    const size_t written = serializeJson(doc, buffer->data(), buffer->size());
+    if (written == 0)
+        return nullptr;
+    buffer->resize(written);
     return buffer;
 }
 
@@ -150,9 +159,9 @@ void WebSocketHandler::attach(AsyncWebServer &server) {
                 // Full slow-state snapshot first, so the client never merges telemetry onto an empty state.
                 if (lastStateBuffer)
                     client->text(lastStateBuffer);
-                ESP_LOGI("WebSocketHandler", "WebSocket client connected (%d open connections)", server->getClients().size());
+                ESP_LOGI("WebSocketHandler", "WebSocket client connected (%u open connections)", (unsigned)server->count());
             } else if (type == WS_EVT_DISCONNECT) {
-                ESP_LOGI("WebSocketHandler", "WebSocket client disconnected (%d open connections)", server->getClients().size());
+                ESP_LOGI("WebSocketHandler", "WebSocket client disconnected");
                 rxBuffers.erase(client->id());
             } else if (type == WS_EVT_DATA) {
                 handleWebSocketData(server, client, type, arg, data, len);
@@ -435,13 +444,15 @@ void WebSocketHandler::publishState(unsigned long now) {
     addWarnings(doc["warn"].to<JsonArray>(), controller->getWarnings(), false);
 
     auto buffer = toWsBuffer(doc);
+    if (!buffer)
+        return;
     const bool unchanged = lastStateBuffer && lastStateBuffer->size() == buffer->size() &&
                            memcmp(lastStateBuffer->data(), buffer->data(), buffer->size()) == 0;
     if (unchanged && now - lastStateSent < STATE_RESEND_PERIOD)
         return;
     lastStateBuffer = buffer;
     lastStateSent = now;
-    ws.textAll(buffer);
+    sendAll(buffer);
 }
 
 // Fast part of evt:status, every STATUS_PERIOD: live readings plus the process progress.
@@ -532,14 +543,29 @@ void WebSocketHandler::publishTelemetry() {
     broadcastJson(statusDoc);
 }
 
-void WebSocketHandler::sendJson(uint32_t clientId, JsonDocument &doc) { ws.text(clientId, toWsBuffer(doc)); }
-
-void WebSocketHandler::broadcastJson(JsonDocument &doc) {
-    if (ws.getClients().empty()) {
-        return;
-    }
-    ws.textAll(toWsBuffer(doc));
+void WebSocketHandler::sendJson(uint32_t clientId, JsonDocument &doc) {
+    auto buffer = toWsBuffer(doc);
+    if (buffer)
+        ws.text(clientId, buffer);
 }
+
+void WebSocketHandler::sendAll(const AsyncWebSocketSharedBuffer &buffer) {
+    if (!buffer || buffer->empty() || ws.count() == 0)
+        return;
+    // Snapshot ids, then send by id. textAll() iterates _clients while a
+    // queue-full close (setCloseClientOnQueueFull) erases that node — the
+    // P4 panic in loopTask / AsyncWebSocket::textAll.
+    uint32_t ids[8];
+    size_t n = 0;
+    for (auto &c : ws.getClients()) {
+        if (c.status() == WS_CONNECTED && n < sizeof(ids) / sizeof(ids[0]))
+            ids[n++] = c.id();
+    }
+    for (size_t i = 0; i < n; i++)
+        ws.text(ids[i], buffer);
+}
+
+void WebSocketHandler::broadcastJson(JsonDocument &doc) { sendAll(toWsBuffer(doc)); }
 
 void WebSocketHandler::sendAutotuneResult() {
     JsonDocument doc(&psramAllocator);

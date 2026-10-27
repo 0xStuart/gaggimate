@@ -158,6 +158,10 @@ class Controller {
     bool isAccessPoint() const { return isApConnection; }
 
     GaggiMateClient *getClientController() { return &comms; }
+    // Brief controller drop so the Bookoo CCCD subscribe can succeed on ESP-Hosted.
+    // Suppresses standby/scale teardown and the controller rescan for that window.
+    void setScaleLinkPause(bool pause);
+    bool isScaleLinkPause() const { return scaleLinkPause.load(); }
 
   private:
     // Initialization methods
@@ -173,6 +177,12 @@ class Controller {
     // the legacy INFO characteristic contents (hardware/version/capabilities).
     void onIncompatibleController(const String &infoJson);
     void setupWifi();
+    void startSoftAp();
+#ifdef WAVESHARE_ESP32_P4_7B
+    // ESP-Hosted has no WiFi.onEvent (C6 0.0.0 faults). Poll STA and restore
+    // the GaggiMate AP so http://4.4.4.1/ stays reachable after a LAN drop.
+    void pollHostedWifi();
+#endif
 
     // Functional methods
     void updateControl();
@@ -283,9 +293,21 @@ class Controller {
     // callback corrupted the heap under load. See setupWifi() + loop().
     volatile bool wifiConnectedPending = false;
     volatile bool wifiDisconnectedPending = false;
+#ifdef WAVESHARE_ESP32_P4_7B
+    bool lastStaConnected = false;
+    unsigned long lastWifiPoll = 0;
+    unsigned long staStableSince = 0;
+    unsigned long lastStaRetry = 0;
+    unsigned long lastWifiHeartbeat = 0;
+    static const unsigned long WIFI_POLL_MS = 3000;
+    static const unsigned long STA_RETRY_MS = 20000;
+    static const unsigned long STA_STABLE_BEFORE_DROP_AP_MS = 60000;
+    static const unsigned long WIFI_HEARTBEAT_MS = 30000;
+#endif
     bool initialized = false;
     bool screenReady = false;
     bool waitingForController = false;
+    std::atomic<bool> scaleLinkPause{false};
     unsigned long connectStartTime = 0;
     // Re-send the config burst for a few seconds after a (re)connect (see loop()).
     unsigned long configResendUntil = 0;

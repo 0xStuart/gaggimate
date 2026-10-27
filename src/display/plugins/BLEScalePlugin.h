@@ -78,9 +78,6 @@ class BLEScalePlugin : public Plugin {
 
     bool active = false;
     bool shutdownPending = false; // set on entering standby, consumed by loop() before disconnecting
-#ifdef WAVESHARE_ESP32_P4_7B
-    bool pausingControllerForScale = false; // ignore controller:bluetooth:disconnect while enabling scale CCCD
-#endif
     bool doConnect = false;
     std::string uuid;
 

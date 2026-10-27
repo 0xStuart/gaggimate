@@ -17,7 +17,7 @@ class BleClientTransport : public Transport, public GmScanCallbacks, public NimB
     void maintain();        // restart scan if it stalled; call from loop()
     bool connectToServer(); // returns true once connected + subscribed
     bool isReadyForConnection() const { return _readyForConnection; }
-    void disconnect();
+    void disconnect(bool rescan = true);
 
     // Forget the paired controller so the display can pair to a different one.
     void clearBonds();
@@ -47,6 +47,7 @@ class BleClientTransport : public Transport, public GmScanCallbacks, public NimB
     NimBLERemoteCharacteristic *_writeChar = nullptr;  // to server (RX_CHAR_UUID)
     NimBLERemoteCharacteristic *_notifyChar = nullptr; // from server (TX_CHAR_UUID)
     bool _readyForConnection = false;
+    bool _rescanOnDisconnect = true;
     bool _lowLatency = false;
     bool _incompatible = false;
     std::function<void(const String &info)> _onIncompatible = nullptr;

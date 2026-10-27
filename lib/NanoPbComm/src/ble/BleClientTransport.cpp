@@ -205,7 +205,8 @@ void BleClientTransport::clearBonds() {
         disconnect(); // onDisconnect restarts the (now unfiltered) scan
 }
 
-void BleClientTransport::disconnect() {
+void BleClientTransport::disconnect(bool rescan) {
+    _rescanOnDisconnect = rescan;
     _readyForConnection = false;
     _haveServerAddress = false;
     if (_client && _client->isConnected())
@@ -334,12 +335,14 @@ void BleClientTransport::onDisconnect(NimBLEClient *client, int reason) {
 void BleClientTransport::onDisconnect(NimBLEClient *client) {
 #endif
     (void)client;
-    ESP_LOGI(LOG_TAG, "Disconnected, will rescan");
+    ESP_LOGI(LOG_TAG, "Disconnected%s", _rescanOnDisconnect ? ", will rescan" : ", scan held");
     _writeChar = nullptr;
     _notifyChar = nullptr;
     _incompatible = false;
     emitConnection(false);
-    scan();
+    if (_rescanOnDisconnect)
+        scan();
+    _rescanOnDisconnect = true;
 }
 
 void BleClientTransport::notifyCallback(NimBLERemoteCharacteristic *characteristic, uint8_t *data, size_t length, bool) {

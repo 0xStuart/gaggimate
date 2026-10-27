@@ -28,7 +28,7 @@ class WebSocketHandler {
 
     void cleanupClients() { ws.cleanupClients(); }
     void closeAll() { ws.closeAll(); }
-    bool hasClients() { return !ws.getClients().empty(); }
+    bool hasClients() { return ws.count() > 0; }
     void broadcastJson(JsonDocument &doc);
     void sendJson(uint32_t clientId, JsonDocument &doc);
 
@@ -51,6 +51,7 @@ class WebSocketHandler {
     void handleFlushStop(uint32_t clientId, JsonDocument &request);
     void publishState(unsigned long now);
     void publishTelemetry();
+    void sendAll(const AsyncWebSocketSharedBuffer &buffer);
     void sendAutotuneResult();
     void sendAutotuneFailed();
 

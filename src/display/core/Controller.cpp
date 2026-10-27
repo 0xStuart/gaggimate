@@ -302,6 +302,11 @@ void Controller::setupBluetooth() {
         } else if (initialized) {
             pluginManager->trigger("controller:bluetooth:disconnect");
             waitingForController = true;
+            if (scaleLinkPause.load()) {
+                ESP_LOGI(LOG_TAG, "Controller disconnect treated as scale-link pause (keeping mode and gauges)");
+                return;
+            }
+            ESP_LOGW(LOG_TAG, "Controller disconnect treated as real loss (standby + zero gauges)");
             clearLiveReadings();
             setMode(MODE_STANDBY);
         }
@@ -475,6 +480,102 @@ void Controller::onIncompatibleController(const String &infoJson) {
     systemInfo.capabilities.hwScale = doc["cp"]["hs"].as<bool>();
 }
 
+void Controller::startSoftAp() {
+    const String apPassword = settings.getWifiApPassword();
+    const bool apSecured = apPassword.length() >= WIFI_AP_PASSWORD_MIN_LENGTH;
+    WiFi.softAPConfig(WIFI_AP_IP, WIFI_AP_IP, WIFI_SUBNET_MASK);
+    WiFi.softAP(WIFI_AP_SSID, apSecured ? apPassword.c_str() : nullptr);
+#ifdef WAVESHARE_ESP32_P4_7B
+    // USB-only power + Hosted C6 browns out at 19.5 dBm; 11 dBm is a workable compromise.
+    WiFi.setTxPower(WIFI_POWER_11dBm);
+#else
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+#endif
+    ESP_LOGI(LOG_TAG, "========================================");
+    ESP_LOGI(LOG_TAG, "  WiFi Access Point started");
+    ESP_LOGI(LOG_TAG, "  SSID:     %s", WIFI_AP_SSID);
+    if (apSecured) {
+        ESP_LOGI(LOG_TAG, "  Password: %s", apPassword.c_str());
+    } else {
+        ESP_LOGI(LOG_TAG, "  Password: <open network>");
+    }
+    ESP_LOGI(LOG_TAG, "  Web UI:   http://%s/", WIFI_AP_IP.toString().c_str());
+    ESP_LOGI(LOG_TAG, "========================================");
+}
+
+#ifdef WAVESHARE_ESP32_P4_7B
+void Controller::pollHostedWifi() {
+    if (updating)
+        return;
+
+    const unsigned long now = millis();
+    if (now - lastWifiPoll < WIFI_POLL_MS)
+        return;
+    lastWifiPoll = now;
+
+    const bool sta = WiFi.status() == WL_CONNECTED && static_cast<uint32_t>(WiFi.localIP()) != 0;
+    const wifi_mode_t mode = WiFi.getMode();
+    const bool apUp = (mode == WIFI_AP || mode == WIFI_AP_STA);
+
+    if (now - lastWifiHeartbeat >= WIFI_HEARTBEAT_MS) {
+        lastWifiHeartbeat = now;
+        ESP_LOGI(LOG_TAG, "WiFi poll: status=%d ip=%s rssi=%d mode=%d sta=%d ap=%d", (int)WiFi.status(),
+                 WiFi.localIP().toString().c_str(), WiFi.RSSI(), (int)mode, (int)sta, (int)apUp);
+    }
+
+    if (sta) {
+        if (!lastStaConnected) {
+            ESP_LOGI(LOG_TAG, "STA recovered: %s", WiFi.localIP().toString().c_str());
+            lastStaConnected = true;
+            staStableSince = now;
+            isApConnection = false;
+            wifiConnectedPending = true;
+        }
+        // Leave the GaggiMate AP up through the first minute so a Hosted flap
+        // still has http://4.4.4.1/. Then drop it so the C6 can do BLE.
+        if (apUp && now - staStableSince >= STA_STABLE_BEFORE_DROP_AP_MS) {
+            ESP_LOGI(LOG_TAG, "STA stable %lums — stopping softAP for BLE coexistence", now - staStableSince);
+            WiFi.softAPdisconnect(true);
+            WiFi.mode(WIFI_STA);
+            WiFi.setAutoReconnect(true);
+            WiFi.setTxPower(WIFI_POWER_11dBm);
+        }
+        return;
+    }
+
+    if (lastStaConnected) {
+        ESP_LOGW(LOG_TAG, "STA lost (status=%d); restoring GaggiMate AP and retrying STA", (int)WiFi.status());
+        lastStaConnected = false;
+        isApConnection = true;
+        wifiDisconnectedPending = true;
+        wifiConnectedPending = true;
+    }
+
+    if (!apUp) {
+        WiFi.mode(WIFI_AP_STA);
+        startSoftAp();
+        if (!isApConnection) {
+            isApConnection = true;
+            wifiConnectedPending = true;
+        }
+    }
+
+    const String ssid = settings.getWifiSsid();
+    const String pass = settings.getWifiPassword();
+    if (ssid.isEmpty() || pass.isEmpty())
+        return;
+    if (lastStaRetry != 0 && now - lastStaRetry < STA_RETRY_MS)
+        return;
+    lastStaRetry = now;
+    ESP_LOGI(LOG_TAG, "STA retry begin '%s'", ssid.c_str());
+    if (WiFi.getMode() != WIFI_AP_STA)
+        WiFi.mode(WIFI_AP_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(ssid.c_str(), pass.c_str());
+    WiFi.setTxPower(WIFI_POWER_11dBm);
+}
+#endif
+
 void Controller::setupWifi() {
     ESP_LOGI(LOG_TAG, "WiFi NVS: ssid='%s' pass_len=%u ap_pass_len=%u", settings.getWifiSsid().c_str(),
              (unsigned)settings.getWifiPassword().length(), (unsigned)settings.getWifiApPassword().length());
@@ -484,29 +585,6 @@ void Controller::setupWifi() {
         settings.setWifiApPassword(generateShortID(DEFAULT_WIFI_AP_PASSWORD_LENGTH));
     }
 
-    const String apPassword = settings.getWifiApPassword();
-    const bool apSecured = apPassword.length() >= WIFI_AP_PASSWORD_MIN_LENGTH;
-    auto startSoftAp = [&]() {
-        WiFi.softAPConfig(WIFI_AP_IP, WIFI_AP_IP, WIFI_SUBNET_MASK);
-        WiFi.softAP(WIFI_AP_SSID, apSecured ? apPassword.c_str() : nullptr);
-#ifdef WAVESHARE_ESP32_P4_7B
-        // USB-only power + Hosted C6 browns out at 19.5 dBm; 11 dBm is a workable compromise.
-        WiFi.setTxPower(WIFI_POWER_11dBm);
-#else
-        WiFi.setTxPower(WIFI_POWER_19_5dBm);
-#endif
-        ESP_LOGI(LOG_TAG, "========================================");
-        ESP_LOGI(LOG_TAG, "  WiFi Access Point started");
-        ESP_LOGI(LOG_TAG, "  SSID:     %s", WIFI_AP_SSID);
-        if (apSecured) {
-            ESP_LOGI(LOG_TAG, "  Password: %s", apPassword.c_str());
-        } else {
-            ESP_LOGI(LOG_TAG, "  Password: <open network>");
-        }
-        ESP_LOGI(LOG_TAG, "  Web UI:   http://%s/", WIFI_AP_IP.toString().c_str());
-        ESP_LOGI(LOG_TAG, "========================================");
-    };
-
     if (settings.getWifiSsid() != "" && settings.getWifiPassword() != "") {
 #ifdef WAVESHARE_ESP32_P4_7B
         // ESP-Hosted: keep softAP up (AP+STA) so http://4.4.4.1/ still works when
@@ -515,6 +593,7 @@ void Controller::setupWifi() {
         WiFi.mode(WIFI_AP_STA);
         startSoftAp();
         ESP_LOGI(LOG_TAG, "STA: begin '%s'", settings.getWifiSsid().c_str());
+        WiFi.setAutoReconnect(true);
         WiFi.begin(settings.getWifiSsid().c_str(), settings.getWifiPassword().c_str());
         WiFi.setTxPower(WIFI_POWER_11dBm);
         WiFi.setHostname(settings.getMdnsName().c_str());
@@ -565,7 +644,12 @@ void Controller::setupWifi() {
         WiFi.begin(settings.getWifiSsid(), settings.getWifiPassword());
         WiFi.setTxPower(WIFI_POWER_19_5dBm);
 #endif
-        for (int attempts = 0; attempts < WIFI_CONNECT_ATTEMPTS; attempts++) {
+#ifdef WAVESHARE_ESP32_P4_7B
+        const int attemptsMax = 40; // Hosted handshake often exceeds the 10s default
+#else
+        const int attemptsMax = WIFI_CONNECT_ATTEMPTS;
+#endif
+        for (int attempts = 0; attempts < attemptsMax; attempts++) {
             if (WiFi.status() == WL_CONNECTED) {
                 break;
             }
@@ -577,13 +661,9 @@ void Controller::setupWifi() {
             ESP_LOGI(LOG_TAG, "Connected to %s with IP address %s", settings.getWifiSsid().c_str(),
                      WiFi.localIP().toString().c_str());
 #ifdef WAVESHARE_ESP32_P4_7B
-            // SoftAP was only a bootstrap aid: leave it up and the C6 starves BLE
-            // (scales never connect). Drop to STA-only once home Wi‑Fi is up.
-            WiFi.softAPdisconnect(true);
-            WiFi.mode(WIFI_STA);
-            WiFi.setTxPower(WIFI_POWER_11dBm);
-            ESP_LOGI(LOG_TAG, "STA: softAP stopped for BLE coexistence");
-            // No STA_GOT_IP event handler on P4 — notify plugins here.
+            // Keep the GaggiMate AP up until pollHostedWifi sees a stable STA.
+            // Tearing it down here left no web path when Hosted dropped later.
+            WiFi.setAutoReconnect(true);
             wifiConnectedPending = true;
 #endif
             configTzTime(resolve_timezone(settings.getTimezone()), NTP_SERVER);
@@ -626,6 +706,11 @@ void Controller::setupWifi() {
     if (isApConnection) {
         pluginManager->trigger("controller:wifi:connect", "AP", 1);
     }
+#ifdef WAVESHARE_ESP32_P4_7B
+    lastStaConnected = (WiFi.status() == WL_CONNECTED && static_cast<uint32_t>(WiFi.localIP()) != 0);
+    staStableSince = lastStaConnected ? millis() : 0;
+    lastWifiPoll = millis();
+#endif
 }
 
 void Controller::loop() {
@@ -639,6 +724,9 @@ void Controller::loop() {
         wifiConnectedPending = false;
         pluginManager->trigger("controller:wifi:connect", "AP", isApConnection ? 1 : 0);
     }
+#ifdef WAVESHARE_ESP32_P4_7B
+    pollHostedWifi();
+#endif
 
     warnings.loop();
     pluginManager->loop();
@@ -691,8 +779,10 @@ void Controller::loop() {
     // ESP-Hosted can leave isConnected() true after a scale-pause disconnect, so
     // the brew UI keeps the last temperature and flashes the heater while the
     // machine is actually cold. No sensor frames for a few seconds means the link is dead.
-    if (initialized && comms.isConnected() && lastSensorMillis != 0 && now - lastSensorMillis > TELEMETRY_STALE_MS) {
-        ESP_LOGW(LOG_TAG, "Controller telemetry stalled for %lu ms, dropping link", now - lastSensorMillis);
+    if (initialized && !scaleLinkPause.load() && comms.isConnected() && lastSensorMillis != 0 &&
+        now - lastSensorMillis > TELEMETRY_STALE_MS) {
+        ESP_LOGW(LOG_TAG, "Controller telemetry stalled for %lu ms, dropping link (standby + zero gauges)",
+                 now - lastSensorMillis);
         comms.disconnect();
         pluginManager->trigger("controller:bluetooth:disconnect");
         waitingForController = true;
@@ -1090,6 +1180,13 @@ void Controller::lowerGrindTarget() {
     }
 }
 
+void Controller::setScaleLinkPause(bool pause) {
+    scaleLinkPause.store(pause);
+    ESP_LOGI(LOG_TAG, "Scale-link pause %s", pause ? "on" : "off");
+    if (pause)
+        lastSensorMillis = 0;
+}
+
 void Controller::clearLiveReadings() {
     currentTemp = 0.0f;
     currentSteamTemp = 0.0f;
@@ -1429,6 +1526,8 @@ void Controller::setMode(int newMode) {
     Event modeEvent = pluginManager->trigger("controller:mode:change", "value", newMode);
     const int previousMode = mode;
     mode = modeEvent.getInt("value");
+    if (mode != previousMode)
+        ESP_LOGI(LOG_TAG, "Mode %d -> %d%s", previousMode, mode, mode == MODE_STANDBY ? " (standby)" : "");
     if (mode == MODE_BREW && previousMode != MODE_BREW)
         flushPending = true; // entering brew mode, including wake-up from standby
     steamReady = false;

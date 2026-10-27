@@ -134,6 +134,7 @@ class AsyncWebSocket {
     void text(uint32_t id, AsyncWebSocketSharedBuffer buffer);
     void textAll(AsyncWebSocketSharedBuffer buffer);
     void cleanupClients() {}
+    size_t count() const { return _clients.size(); }
     void closeAll();
     const std::vector<AsyncWebSocketClient *> &getClients() const { return _clients; }
 
